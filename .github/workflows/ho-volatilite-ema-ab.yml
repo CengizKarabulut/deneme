@@ -1,0 +1,84 @@
+name: HO Volatilite EMA AB
+run-name: "HO/Volatilite · EMA A/B · ${{ github.run_id }}"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/ho-volatilite-ema-ab-bootstrap"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        period: ["15m","30m","45m","1H","2H","4H","1D","1W","1M"]
+    defaults:
+      run:
+        working-directory: experiments/ho_volatilite
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Bagimliliklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pandas>=2.0" "numpy>=1.24"
+      - name: Gecmis veri
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PERIOD: ${{ matrix.period }}
+        run: |
+          set -euo pipefail
+          mkdir -p data /tmp/history
+
+          fetch_db() {
+            local p="$1"
+            local out="$2"
+            local name="historical-live-${p}"
+            local id
+            local tmp="/tmp/history/${p}"
+            mkdir -p "$tmp"
+            id="$(gh api "repos/CengizKarabulut/taramabot/actions/artifacts?name=${name}&per_page=100" | jq -r '[.artifacts[]|select(.expired==false)]|sort_by(.created_at)|last|.id // empty')"
+            test -n "$id"
+            gh api "repos/CengizKarabulut/taramabot/actions/artifacts/${id}/zip" > "${tmp}.zip"
+            unzip -q -o "${tmp}.zip" -d "$tmp"
+            local db
+            db="$(find "$tmp" -type f -name '*.sqlite' | head -n1)"
+            test -n "$db"
+            cp "$db" "$out"
+          }
+
+          fetch_db "$PERIOD" "data/target.sqlite"
+          if [ "$PERIOD" = "1H" ]; then
+            cp "data/target.sqlite" "data/ref1h.sqlite"
+          else
+            fetch_db "1H" "data/ref1h.sqlite"
+          fi
+          if [ "$PERIOD" = "1D" ]; then
+            cp "data/target.sqlite" "data/daily.sqlite"
+          else
+            fetch_db "1D" "data/daily.sqlite"
+          fi
+
+      - name: EMA A/B isolation
+        run: |
+          mkdir -p reports/ema_ab
+          python ho_volatilite_ema_ab.py \
+            --db data/target.sqlite \
+            --ref1h-db data/ref1h.sqlite \
+            --daily-db data/daily.sqlite \
+            --period "${{ matrix.period }}" \
+            --output "reports/ema_ab/${{ matrix.period }}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ho-volatilite-ema-ab-${{ matrix.period }}-${{ github.run_id }}
+          path: experiments/ho_volatilite/reports/ema_ab/${{ matrix.period }}.json
+          retention-days: 30
