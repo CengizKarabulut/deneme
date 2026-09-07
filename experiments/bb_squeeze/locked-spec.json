@@ -1,0 +1,160 @@
+{
+  "scan_id": "bb_squeeze_v1",
+  "name": "7 - BB Daralması",
+  "status": "LOCKED",
+  "research_date": "2026-09-07",
+  "common": {
+    "bollinger_bands": {"length": 20, "stddev": 2.0},
+    "bb_width_percent_formula": "100 * (Upper - Lower) / Basis",
+    "macd": {"fast": 12, "slow": 26, "signal": 9},
+    "macd_level_gt_zero_required": true,
+    "volume_filter": {
+      "formula": "Volume[t] > mean(Volume[t-1]..Volume[t-10])",
+      "same_timeframe_bars": true,
+      "current_bar_excluded_from_average": true
+    },
+    "completed_bar_only": true,
+    "entry_execution": "next_bar_open",
+    "cost_model": {"commission_bps_each_side": 10, "slippage_bps_each_side": 10},
+    "initial_risk_clamp_atr": {"min": 0.6, "max": 2.6},
+    "same_bar_stop_target_priority": "STOP_FIRST",
+    "allocation": {"tp1": 0.3, "tp2": 0.3, "tp3": 0.2, "runner": 0.2},
+    "tp1_break_even": false,
+    "histogram_episode_semantics": "persistent histogram conditions trigger only on False-to-True episode start",
+    "relative20_definition": "BB Width[t] <= 20th percentile of BB Width[t-1..t-120]; current bar excluded from percentile reference",
+    "release20_definition": "previous bar was relative20 squeeze and current BB Width > previous BB Width",
+    "true_forward_validation": "future unseen bars only"
+  },
+  "timeframes": {
+    "15m": {"status": "REJECT"},
+    "30m": {"status": "REJECT"},
+    "45m": {"status": "REJECT"},
+    "1H": {"status": "REJECT"},
+    "2H": {"status": "REJECT"},
+    "4H": {
+      "status": "ACTIVE_SECONDARY",
+      "entry": {
+        "squeeze": "relative20",
+        "macd_trigger": "fresh_bullish_crossover",
+        "macd_level_gt_zero": true,
+        "volume_gt_previous_10_bar_average": true
+      },
+      "exit": {
+        "family": "adaptive",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 7, "atr_buffer": 0.2},
+        "targets_r": [1.0, 2.0, 3.0],
+        "normal_trail_after_tp2_atr": 2.0,
+        "basis_loss_tighten": {
+          "trigger": "Close < BB Basis",
+          "trail_atr": 1.5,
+          "sticky_once_triggered": true
+        },
+        "technical_full_exit": "Close < BB Basis AND MACD < Signal",
+        "max_hold_bars": 40,
+        "tp1_break_even": false
+      },
+      "validation": {
+        "trades": 1967,
+        "profit_factor": 1.5302236,
+        "expectancy_r": 0.1833106,
+        "positive_folds": 4,
+        "worst_fold_expectancy_r": 0.002525,
+        "note": "Thin worst-fold margin; secondary rather than primary active scanner"
+      }
+    },
+    "1D": {
+      "status": "ACTIVE",
+      "entry": {
+        "squeeze": "bb_width_percent_lte_10",
+        "macd_level_gt_zero": true,
+        "macd_trigger": "fresh_episode_histogram_rising_two_bars",
+        "histogram_condition": "H[t] > H[t-1] > H[t-2]",
+        "volume_gt_previous_10_bar_average": true
+      },
+      "exit": {
+        "family": "structural",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 7, "atr_buffer": 0.2},
+        "targets_r": [1.0, 2.0, 3.0],
+        "trail_after_tp2_atr": 2.2,
+        "technical_hard_exit": null,
+        "max_hold_bars": 40,
+        "tp1_break_even": false
+      },
+      "validation": {
+        "trades": 2716,
+        "profit_factor": 1.715315,
+        "expectancy_r": 0.335114,
+        "win_rate_pct": 47.79,
+        "positive_folds": 4,
+        "worst_fold_expectancy_r": 0.126969
+      }
+    },
+    "1W": {
+      "status": "ACTIVE",
+      "entry": {
+        "squeeze": "release20",
+        "macd_level_gt_zero": true,
+        "macd_trigger": "fresh_episode_histogram_rising_two_bars",
+        "histogram_condition": "H[t] > H[t-1] > H[t-2]",
+        "volume_gt_previous_10_bar_average": true
+      },
+      "exit": {
+        "family": "structural",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 9, "atr_buffer": 0.2},
+        "targets_r": [1.1, 2.2, 3.3],
+        "trail_after_tp2_atr": 2.3,
+        "technical_hard_exit": null,
+        "max_hold_bars": 60,
+        "tp1_break_even": false
+      },
+      "validation": {
+        "trades": 1597,
+        "profit_factor": 2.679845,
+        "expectancy_r": 0.65688,
+        "win_rate_pct": 54.10,
+        "positive_folds": 4,
+        "worst_fold_expectancy_r": 0.334227
+      }
+    },
+    "1M": {
+      "status": "RESEARCH_FORWARD_WATCH",
+      "entry": {
+        "squeeze": "release20",
+        "macd_level_gt_zero": true,
+        "macd_trigger": "fresh_episode_histogram_rising_two_bars",
+        "histogram_condition": "H[t] > H[t-1] > H[t-2]",
+        "volume_gt_previous_10_bar_average": true
+      },
+      "exit": {
+        "family": "structural_reference",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 9, "atr_buffer": 0.15},
+        "targets_r": [1.0, 2.0, 3.0],
+        "trail_after_tp2_atr": 2.5,
+        "technical_hard_exit": null,
+        "max_hold_bars": 36,
+        "tp1_break_even": false
+      },
+      "validation": {
+        "trades": 82,
+        "profit_factor": 2.076631,
+        "expectancy_r": 0.407333,
+        "win_rate_pct": 48.78,
+        "positive_folds": 3,
+        "worst_fold_expectancy_r": -0.132321,
+        "caveat": "Small sample and one negative chronological fold"
+      }
+    }
+  },
+  "break_even_final": {
+    "4H": {"no_be_expectancy_r": 0.183311, "entry_be_expectancy_r": 0.163938, "cost_be_expectancy_r": 0.161454, "decision": "NO_BE"},
+    "1D": {"no_be_expectancy_r": 0.335114, "entry_be_expectancy_r": 0.280062, "cost_be_expectancy_r": 0.284417, "decision": "NO_BE"},
+    "1W": {"no_be_expectancy_r": 0.65688, "entry_be_expectancy_r": 0.586661, "cost_be_expectancy_r": 0.587909, "decision": "NO_BE"},
+    "1M": {"no_be_expectancy_r": 0.407333, "entry_be_expectancy_r": 0.25268, "cost_be_expectancy_r": 0.254953, "decision": "NO_BE"}
+  },
+  "research_runs": {
+    "entry_stage": 34157171006,
+    "sat_robustness": 34157449047,
+    "be_ab_initial": 34157884289,
+    "be_ab_final": 34158149944
+  }
+}
