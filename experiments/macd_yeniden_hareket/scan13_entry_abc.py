@@ -28,6 +28,15 @@ def ema(s: pd.Series, span: int) -> pd.Series:
     return s.ewm(span=span, adjust=False, min_periods=span).mean()
 
 
+def atr14(frame: pd.DataFrame) -> pd.Series:
+    h = pd.to_numeric(frame["high"], errors="coerce")
+    l = pd.to_numeric(frame["low"], errors="coerce")
+    c = pd.to_numeric(frame["close"], errors="coerce")
+    pc = c.shift(1)
+    tr = pd.concat([h-l, (h-pc).abs(), (l-pc).abs()], axis=1).max(axis=1)
+    return tr.ewm(alpha=1.0/14.0, adjust=False, min_periods=14).mean()
+
+
 def indicators(frame: pd.DataFrame) -> pd.DataFrame:
     out = frame.copy()
     c = pd.to_numeric(out["close"], errors="coerce")
@@ -41,6 +50,7 @@ def indicators(frame: pd.DataFrame) -> pd.DataFrame:
     rise2 = ((hist > hist.shift(1)) & (hist.shift(1) > hist.shift(2))).fillna(False)
     c_cond = ((macd > 0.0) & (macd > sig) & rise2).fillna(False)
     out["reaccel_event"] = (c_cond & ~c_cond.shift(1).fillna(False)).fillna(False)
+    out["atr14"] = atr14(out)
     return out
 
 
