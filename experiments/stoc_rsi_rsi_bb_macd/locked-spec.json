@@ -1,0 +1,144 @@
+{
+  "scan_id": "stoc_rsi_rsi_bb_macd_v1",
+  "name": "11 - Stoc.RSI & RSI & BB & MACD",
+  "status": "LOCKED",
+  "research_date": "2026-09-08",
+  "entry_selection": {
+    "winner": "B_bb_reclaim_with_momentum_confirm",
+    "A_original": {
+      "rules": [
+        "RSI14 > 30",
+        "StochRSI K fresh crosses above D",
+        "Close fresh crosses above BB20 Basis",
+        "MACD Level fresh crosses above Signal",
+        "RVOL20 > 1.50"
+      ]
+    },
+    "B_final": {
+      "rules": [
+        "RSI14 > 30",
+        "Close[t] > BB20 Basis[t] AND Close[t-1] <= BB20 Basis[t-1]",
+        "StochRSI K > D",
+        "MACD Level > Signal",
+        "RVOL20 > 1.50"
+      ],
+      "interpretation": "BB Basis reclaim is the fresh trigger; StochRSI and MACD are momentum confirmations rather than same-bar fresh-cross requirements."
+    }
+  },
+  "common": {
+    "rsi": {"length": 14, "condition": ">30"},
+    "stoch_rsi": {"rsi_length": 14, "stoch_length": 14, "k_smooth": 3, "d_smooth": 3, "final_condition": "K>D"},
+    "bollinger": {"length": 20, "basis": "SMA20", "trigger": "fresh_close_cross_above_basis"},
+    "macd": {"fast": 12, "slow": 26, "signal": 9, "final_condition": "Level>Signal"},
+    "rvol20": {"threshold": 1.5, "formula": "Volume[t] / mean(Volume[t-1]..Volume[t-20])", "current_bar_excluded": true, "same_timeframe_bars": true},
+    "completed_bar_only": true,
+    "entry_execution": "next_bar_open",
+    "cost_model": {"commission_bps_each_side": 10, "slippage_bps_each_side": 10},
+    "same_bar_stop_target_priority": "STOP_FIRST",
+    "initial_risk_clamp_atr": {"min": 0.6, "max": 2.6},
+    "allocation": {"tp1": 0.3, "tp2": 0.3, "tp3": 0.2, "runner": 0.2},
+    "tp1_break_even": false,
+    "overlapping_trades_same_symbol": false,
+    "true_forward_validation": "future unseen bars only"
+  },
+  "timeframes": {
+    "15m": {"status": "REJECT"},
+    "30m": {"status": "REJECT"},
+    "45m": {"status": "REJECT"},
+    "1H": {"status": "REJECT"},
+    "2H": {"status": "REJECT"},
+    "4H": {
+      "status": "ACTIVE_SECONDARY",
+      "entry": "B_final",
+      "exit": {
+        "family": "bb_basis_loss_tighten",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 9, "atr_buffer": 0.25, "fallback_stop_atr": 1.2},
+        "targets_r": [1.1, 2.2, 3.3],
+        "normal_trail_after_tp2_atr": 1.8,
+        "basis_loss_tighten": {"trigger": "Close < BB Basis", "trail_atr": 1.0, "sticky_once_triggered": true, "may_activate_before_tp2": true},
+        "technical_hard_exit": null,
+        "max_hold_bars": 40,
+        "tp1_break_even": false
+      },
+      "validation": {
+        "trades": 7016,
+        "profit_factor": 2.693271,
+        "expectancy_r": 0.346491,
+        "win_rate_pct": 53.3780,
+        "positive_folds": 4,
+        "worst_fold_expectancy_r": 0.1340,
+        "note": "Entry alone was 3/4; BB Basis-loss risk management materially creates the 4/4 result, therefore secondary rather than primary."
+      }
+    },
+    "1D": {
+      "status": "ACTIVE",
+      "entry": "B_final",
+      "exit": {
+        "family": "bb_basis_loss_tighten",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 7, "atr_buffer": 0.25, "fallback_stop_atr": 1.25},
+        "targets_r": [1.1, 2.2, 3.3],
+        "normal_trail_after_tp2_atr": 2.0,
+        "basis_loss_tighten": {"trigger": "Close < BB Basis", "trail_atr": 1.0, "sticky_once_triggered": true, "may_activate_before_tp2": true},
+        "technical_hard_exit": null,
+        "max_hold_bars": 60,
+        "tp1_break_even": false
+      },
+      "validation": {
+        "trades": 4480,
+        "profit_factor": 2.690466,
+        "expectancy_r": 0.345500,
+        "win_rate_pct": 51.7634,
+        "positive_folds": 4,
+        "worst_fold_expectancy_r": 0.278155
+      }
+    },
+    "1W": {
+      "status": "ACTIVE",
+      "entry": "B_final",
+      "exit": {
+        "family": "structural",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 11, "atr_buffer": 0.20, "fallback_stop_atr": 1.3},
+        "targets_r": [1.1, 2.2, 3.3],
+        "trail_after_tp2_atr": 2.3,
+        "technical_hard_exit": null,
+        "max_hold_bars": 80,
+        "tp1_break_even": false
+      },
+      "validation": {
+        "trades": 1202,
+        "profit_factor": 3.164072,
+        "expectancy_r": 0.789816,
+        "win_rate_pct": 57.6539,
+        "positive_folds": 4,
+        "worst_fold_expectancy_r": 0.519236
+      }
+    },
+    "1M": {"status": "INSUFFICIENT_SAMPLE_RESEARCH", "note": "B had only 37 completed stitched trades and 2/4 positive folds."}
+  },
+  "entry_ab_key_results": {
+    "4H": {
+      "A": {"trades": 1267, "profit_factor": 1.308564, "expectancy_r": 0.153311, "positive_folds": 2},
+      "B": {"trades": 6043, "profit_factor": 1.249510, "expectancy_r": 0.124708, "positive_folds": 3}
+    },
+    "1D": {
+      "A": {"trades": 629, "profit_factor": 1.150344, "expectancy_r": 0.080296, "positive_folds": 3},
+      "B": {"trades": 3971, "profit_factor": 1.327560, "expectancy_r": 0.164679, "positive_folds": 4}
+    },
+    "1W": {
+      "A": {"trades": 209, "profit_factor": 2.507482, "expectancy_r": 0.589542, "positive_folds": 4},
+      "B": {"trades": 1241, "profit_factor": 2.988677, "expectancy_r": 0.713765, "positive_folds": 4}
+    }
+  },
+  "break_even_final": {
+    "4H": {"no_be_expectancy_r": 0.346491, "entry_be_expectancy_r": 0.272867, "cost_be_expectancy_r": 0.267118, "decision": "NO_BE"},
+    "1D": {"no_be_expectancy_r": 0.345500, "entry_be_expectancy_r": 0.279748, "cost_be_expectancy_r": 0.277713, "decision": "NO_BE"},
+    "1W": {"no_be_expectancy_r": 0.789816, "entry_be_expectancy_r": 0.643687, "cost_be_expectancy_r": 0.645982, "decision": "NO_BE"}
+  },
+  "research_runs": {
+    "entry_ab": 34169205526,
+    "sat_robustness": 34169446265,
+    "sat_compact": 34169635503,
+    "tight_plateau": 34169929644,
+    "be_final": 34170112684
+  }
+}
