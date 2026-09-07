@@ -1,0 +1,59 @@
+name: NE ARARSAN VAR Volume10 A-B
+run-name: "NE ARARSAN VAR · volume10 A/B · ${{ github.run_id }}"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/ne-ararsan-var-volume10-bootstrap"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        period: ["1D", "1W"]
+    defaults:
+      run:
+        working-directory: experiments/ne_ararsan_var
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@v4
+      - name: Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Bagimliliklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pandas>=2.0" "numpy>=1.24"
+      - name: Gecmis veriyi indir
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PERIOD: ${{ matrix.period }}
+        run: |
+          set -euo pipefail
+          mkdir -p data /tmp/history
+          name="historical-live-${PERIOD}"
+          id="$(gh api "repos/CengizKarabulut/taramabot/actions/artifacts?name=${name}&per_page=100" | jq -r '[.artifacts[]|select(.expired==false)]|sort_by(.created_at)|last|.id // empty')"
+          test -n "$id"
+          gh api "repos/CengizKarabulut/taramabot/actions/artifacts/${id}/zip" > /tmp/history.zip
+          unzip -q -o /tmp/history.zip -d /tmp/history
+          src="$(find /tmp/history -type f -name '*.sqlite' | head -n1)"
+          cp "$src" "data/historical_${PERIOD}.sqlite"
+      - name: A-B testi
+        run: |
+          mkdir -p reports/volume10-ab
+          python ne_ararsan_var_volume10_ab.py --db "data/historical_${{ matrix.period }}.sqlite" --period "${{ matrix.period }}" --output "reports/volume10-ab/${{ matrix.period }}.json"
+      - name: Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ne-ararsan-var-volume10-${{ matrix.period }}-${{ github.run_id }}
+          path: experiments/ne_ararsan_var/reports/volume10-ab/${{ matrix.period }}.json
+          retention-days: 30
