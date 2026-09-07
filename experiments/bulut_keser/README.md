@@ -1,41 +1,38 @@
-# 9 - BulutKeser
+# 9 - BulutKeser — LOCKED
 
-Araştırma alanı. Production kodu değildir.
+Durum: **Araştırma tamamlandı / üretime aktarılabilir spesifikasyon hazır.**
 
-## Orijinal fikir
+Nihai karar ve ayrıntılı metodoloji:
 
-- ADX(14): 20–40
-- Fiyat BB(20,2) Lower ile Upper arasında
-- RVOL20 > 1.20
-- Ichimoku(9,26,52,26): Tenkan / Conversion Line, Kijun / Base Line'ı yukarı yeni keser
+- `reports/final-decision.md`
+- `locked-spec.json`
 
-## İlk ana deney — Kumo konumu
+## Ana bulgu
 
-Orijinal koşullar aynen korunur. Yalnız Tenkan-Kijun bullish cross barındaki fiyatın mevcut grafikte görünen Kumo'ya göre konumu ayrılır:
+Tenkan/Kijun bullish kesişiminin Kumo'ya göre konumu timeframe'e göre farklı anlam taşıyor:
 
-- `all`: Kumo filtresi yok; orijinal kontrol grubu
-- `above`: Close > Kumo top
-- `inside`: Kumo bottom <= Close <= Kumo top
-- `below`: Close < Kumo bottom
+- **1D ACTIVE:** Kumo **altında** erken toparlanma
+- **1W ACTIVE:** Kumo **üstünde** trend devamı / teyit
+- **4H ACTIVE_SECONDARY:** Kumo **içinde**, fakat edge'in önemli kısmı Kijun tabanlı risk yönetiminden geliyor
+- 15m–2H: reject
+- 1M: yetersiz örneklem
 
-Ichimoku Kumo, gerçek grafik semantiğiyle hesaplanır. Senkou A/B ham değerleri 26 bar ileri çizildiği için, mevcut bardaki görünen Kumo değerleri `raw_span.shift(26)` ile elde edilir. Böylece yalnız geçmiş bilgi kullanılır; look-ahead yoktur.
+Kumo, Ichimoku'nun gerçek 26-bar displacement semantiğiyle ve look-ahead olmadan hesaplanır.
 
-## Sabit ortak koşullar
+## Nihai üretim adayları
 
-- `20 <= ADX14 <= 40`
-- `BB Lower < Close < BB Upper`
-- `RVOL20 > 1.20`
-- fresh bullish Tenkan/Kijun cross
+### 4H — ACTIVE_SECONDARY
 
-RVOL20 = `Volume[t] / mean(Volume[t-1]..Volume[t-20])`; mevcut bar ortalamaya dahil değildir ve her timeframe kendi barlarını kullanır.
+Tenkan ↑ Kijun + Close Kumo içinde + ADX>20 + fiyat BB içinde + RVOL20>1.20. Kijun kaybında trailing sıkılaşır.
 
-## Metodoloji
+### 1D — ACTIVE
 
-- 15m, 30m, 45m, 1H, 2H, 4H, 1D, 1W, 1M
-- yalnız tamamlanmış bar
-- giriş referansı t+1 open
-- 10 bps komisyon + 10 bps slippage her yön
-- aynı OHLC barda stop ve hedef birlikte görünürse STOP öncelikli
-- dört Kumo konum varyantı aynı yapısal SAT altında test edilir
-- her varyant kendi sinyal zamanlarından dört kronolojik pencereye bölünür
-- güçlü timeframe ve Kumo sınıfı belli olduktan sonra BB/ADX/RVOL ve SAT robustness ikinci aşamada ele alınır
+Tenkan ↑ Kijun + Close Kumo altında + ADX20–35 + BB Basis<Close<Upper + RVOL20>1.50.
+
+### 1W — ACTIVE
+
+Tenkan ↑ Kijun + Close Kumo üstünde + ADX20–35 + RVOL20>1.50. Bollinger filtresi yok.
+
+TP1 sonrası break-even üçünde de kullanılmaz.
+
+> Geçmiş veri artık gözlenmiştir. Gerçek bağımsız doğrulama gelecekte oluşacak yeni barlardır.
