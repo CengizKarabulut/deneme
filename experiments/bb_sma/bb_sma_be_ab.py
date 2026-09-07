@@ -217,8 +217,14 @@ def collect_mode(frames, p: dict[str, Any], mode: str, start, end):
             t = simulate_be(data, signal_pos, p, mode)
             if t is None:
                 continue
+            # Match bb_sma_wf.collect exactly: trades crossing the fold boundary
+            # are excluded rather than attributed to either chronological window.
+            if pd.Timestamp(t["exit_time"]) >= end:
+                continue
+            t["symbol"] = symbol
             trades.append(t)
             last_exit = int(t["exit_pos"])
+    trades.sort(key=lambda x: x["entry_time"])
     return trades
 
 
@@ -259,7 +265,7 @@ def analyze(db: str, period: str) -> dict[str, Any]:
     decision = "NO_BE" if float(no_be["stitched"].get("expectancy_r", 0.0)) >= float(best_be["stitched"].get("expectancy_r", 0.0)) else best_be["mode"].upper()
 
     return {
-        "version": "bb-sma-be-ab-v1",
+        "version": "bb-sma-be-ab-v2",
         "period": period,
         "entry_rule_frozen": entry_name,
         "exit_rule_frozen": EXIT_BY_PERIOD[period],
