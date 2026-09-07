@@ -1,0 +1,88 @@
+name: StochRSI Momentum Volume Lab
+run-name: "StochRSI/MOM/Hacim · all TF · ${{ github.run_id }}"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/stoch-momentum-volume-bootstrap"
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: stoch-momentum-volume-lab
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: 9
+      matrix:
+        period: ["15m", "30m", "45m", "1H", "2H", "4H", "1D", "1W", "1M"]
+
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Bagimliliklari kur
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pandas>=2.0" "numpy>=1.24"
+
+      - name: Kaynak gecmis-veri artifactini indir
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_REPO: CengizKarabulut/taramabot
+          PERIOD: ${{ matrix.period }}
+        run: |
+          set -euo pipefail
+          mkdir -p data/history /tmp/history
+          name="historical-live-${PERIOD}"
+          artifact_id="$(
+            gh api "repos/${SOURCE_REPO}/actions/artifacts?name=${name}&per_page=100" |
+              jq -r '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .id // empty'
+          )"
+          if [ -z "${artifact_id}" ]; then
+            echo "::error::${SOURCE_REPO} icinde ${name} artifact bulunamadi."
+            exit 2
+          fi
+          gh api "repos/${SOURCE_REPO}/actions/artifacts/${artifact_id}/zip" > /tmp/history.zip
+          unzip -q -o /tmp/history.zip -d /tmp/history
+          sqlite_path="$(find /tmp/history -type f -name '*.sqlite' | head -n1 || true)"
+          if [ -z "${sqlite_path}" ]; then
+            echo "::error::Artifact icinde SQLite yok."
+            exit 3
+          fi
+          cp "${sqlite_path}" "data/history/historical_${PERIOD}.sqlite"
+
+      - name: Kodu derle
+        working-directory: experiments/stoch_rsi_momentum_volume
+        run: |
+          python -m py_compile market_data_store.py stoch_momentum_volume_wf.py
+
+      - name: Walk-forward testi
+        working-directory: experiments/stoch_rsi_momentum_volume
+        run: |
+          mkdir -p reports/run
+          python stoch_momentum_volume_wf.py \
+            --db "../../data/history/historical_${{ matrix.period }}.sqlite" \
+            --period "${{ matrix.period }}" \
+            --output "reports/run/${{ matrix.period }}.json"
+
+      - name: Sonucu artifact olarak sakla
+        uses: actions/upload-artifact@v4
+        with:
+          name: stoch-momentum-volume-${{ matrix.period }}-${{ github.run_id }}
+          path: experiments/stoch_rsi_momentum_volume/reports/run/${{ matrix.period }}.json
+          if-no-files-found: error
+          retention-days: 30
