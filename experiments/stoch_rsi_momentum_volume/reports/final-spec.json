@@ -1,0 +1,94 @@
+{
+  "name": "StochRSI / Momentum / Hacim",
+  "version": "locked-2026-09-07",
+  "status": {
+    "15m": "REJECT",
+    "30m": "REJECT",
+    "45m": "REJECT",
+    "1H": "REJECT",
+    "2H": "REJECT",
+    "4H": "RESEARCH_ONLY",
+    "1D": "ACTIVE_CANDIDATE_LOCKED",
+    "1W": "ACTIVE_CANDIDATE_LOCKED",
+    "1M": "ACTIVE_FORWARD_WATCH_LOCKED"
+  },
+  "common": {
+    "volume_rule": "Volume[t] > mean(Volume[t-1] ... Volume[t-10])",
+    "volume_reference_excludes_current_bar": true,
+    "mtf_numeric_comparison": false,
+    "signal_on_completed_bar": true,
+    "entry_execution": "next_bar_open",
+    "lookahead": false,
+    "same_bar_stop_target_policy": "STOP_FIRST",
+    "research_costs": {
+      "commission_bps_per_side": 10.0,
+      "slippage_bps_per_side": 10.0
+    },
+    "position_allocation": {
+      "tp1": 0.30,
+      "tp2": 0.30,
+      "tp3": 0.20,
+      "runner": 0.20
+    },
+    "risk_clamp_atr": {
+      "min": 0.60,
+      "max": 2.60
+    },
+    "tp1_break_even": false,
+    "trailing_activation": "after_tp2",
+    "hard_stoch_momentum_exit": false
+  },
+  "timeframes": {
+    "1D": {
+      "entry": {
+        "trigger": "StochRSI(3,3,14,14) K crosses above D",
+        "confirmation": "MOM(10) > 0"
+      },
+      "stop": {
+        "mode": "swing",
+        "swing_bars": 7,
+        "buffer_atr": 0.20,
+        "fallback_atr": 1.25
+      },
+      "targets_r": [1.0, 2.0, 3.0],
+      "trailing_atr": 2.20,
+      "max_hold_bars": 40
+    },
+    "1W": {
+      "entry": {
+        "trigger": "MOM(10) crosses above 0",
+        "confirmation": "StochRSI(3,3,14,14) K > D"
+      },
+      "stop": {
+        "mode": "swing",
+        "swing_bars": 9,
+        "buffer_atr": 0.15,
+        "fallback_atr": 1.30
+      },
+      "targets_r": [1.0, 2.0, 3.0],
+      "trailing_atr": 2.30,
+      "max_hold_bars": 60
+    },
+    "1M": {
+      "entry": {
+        "trigger": "MOM(10) crosses above 0",
+        "confirmation": "StochRSI(3,3,14,14) K > D"
+      },
+      "stop": {
+        "mode": "swing",
+        "swing_bars": 7,
+        "buffer_atr": 0.15,
+        "fallback_atr": 1.30
+      },
+      "targets_r": [1.1, 2.2, 3.3],
+      "trailing_atr": 2.70,
+      "max_hold_bars": 36
+    }
+  },
+  "forward_monitoring": {
+    "1D": true,
+    "1W": true,
+    "1M": true,
+    "note": "Locked historical rules must not be re-optimized on each new observation; evaluate new data as forward validation."
+  }
+}
