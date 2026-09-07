@@ -1,31 +1,55 @@
-# 11 - Stoc.RSI & RSI & BB & MACD
+# 11 - Stoc.RSI & RSI & BB & MACD — LOCKED
 
-Bu klasor 11 numarali taramanin A/B izole giris deneyidir. Production kodu degildir.
+Durum: **LOCKED**
 
-## A - Orijinal
-
-- RSI(14) > 30
-- StochRSI(3,3,14,14) K, D'yi ayni barda fresh bullish keser
-- Close, BB(20) Basis'i ayni barda fresh yukari keser
-- MACD(12,26,9) Level, Signal'i ayni barda fresh bullish keser
-- RVOL20 > 1.50
-
-## B - BB reclaim ana tetikleyici
+Nihai production adayi **B modelidir**:
 
 - RSI(14) > 30
 - Close, BB(20) Basis'i fresh yukari keser
-- StochRSI K > D
-- MACD Level > Signal
+- StochRSI(3,3,14,14) K > D
+- MACD(12,26,9) Level > Signal
 - RVOL20 > 1.50
 
-## Ortak metodoloji
+Orijinal A modeli ayni barda StochRSI, BB Basis ve MACD fresh bullish crossover ister. A haftalikta guclu kalmis olsa da B daha genis orneklem, daha yuksek expectancy ve daha iyi rejim dayanimi vermistir.
 
-- 15m, 30m, 45m, 1H, 2H, 4H, 1D, 1W, 1M
-- yalniz tamamlanmis bar
-- giris referansi t+1 open
-- RVOL20 = Volume[t] / mean(Volume[t-1]..Volume[t-20]); mevcut bar ortalamaya dahil degil
-- her varyant kendi sinyal zamanlarindan dort kronolojik pencereye ayrilir
-- A ve B ayni yapisal SAT kontrol profiliyle test edilir
-- 10 bps komisyon + 10 bps slippage her yon
-- ayni OHLC barinda stop ve hedef birlikte gorunurse STOP once
-- gecmis veri gozlenmis veridir; gercek bagimsiz dogrulama gelecekteki yeni barlardir
+## Nihai timeframe kararlari
+
+- 15m / 30m / 45m / 1H / 2H: **REJECT**
+- 4H: **ACTIVE_SECONDARY**
+- 1D: **ACTIVE**
+- 1W: **ACTIVE**
+- 1M: **INSUFFICIENT_SAMPLE / RESEARCH**
+
+## Nihai SAT ozet
+
+### 4H
+
+- 9-bar swing low - 0.25 ATR
+- TP: 1.1R / 2.2R / 3.3R
+- normal trail: 1.8 ATR
+- Close < BB Basis sonrasi sticky tight trail: 1.0 ATR
+- max hold: 40 bar
+- NO-BE
+
+### 1D
+
+- 7-bar swing low - 0.25 ATR
+- TP: 1.1R / 2.2R / 3.3R
+- normal trail: 2.0 ATR
+- Close < BB Basis sonrasi sticky tight trail: 1.0 ATR
+- max hold: 60 bar
+- NO-BE
+
+### 1W
+
+- 11-bar swing low - 0.20 ATR
+- TP: 1.1R / 2.2R / 3.3R
+- TP2 sonrasi 2.3 ATR trail
+- max hold: 80 bar
+- NO-BE
+
+Detayli insan-okunur karar: `reports/final-decision.md`
+
+Makine-okunur production spesifikasyonu: `locked-spec.json`
+
+Gecmis veri gozlenmistir; gercek bagimsiz dogrulama gelecekte olusacak yeni barlardir.
