@@ -1,0 +1,157 @@
+{
+  "scan_id": "bulut_keser_v1",
+  "name": "9 - BulutKeser",
+  "status": "LOCKED",
+  "research_date": "2026-09-08",
+  "common": {
+    "ichimoku": {
+      "tenkan_length": 9,
+      "kijun_length": 26,
+      "senkou_b_length": 52,
+      "displacement": 26,
+      "tenkan_formula": "midpoint(highest_high_9, lowest_low_9)",
+      "kijun_formula": "midpoint(highest_high_26, lowest_low_26)",
+      "senkou_a_raw_formula": "(Tenkan + Kijun) / 2",
+      "senkou_b_raw_formula": "midpoint(highest_high_52, lowest_low_52)",
+      "displayed_cloud_semantics": "current displayed Senkou A/B are raw Senkou values computed 26 bars earlier; equivalent to raw_span.shift(26)",
+      "cloud_top": "max(displayed_senkou_a, displayed_senkou_b)",
+      "cloud_bottom": "min(displayed_senkou_a, displayed_senkou_b)",
+      "tenkan_kijun_trigger": "Tenkan[t] > Kijun[t] AND Tenkan[t-1] <= Kijun[t-1]",
+      "lookahead": false
+    },
+    "adx_period": 14,
+    "bollinger_bands": {"length": 20, "stddev": 2.0},
+    "rvol20": {
+      "formula": "Volume[t] / mean(Volume[t-1]..Volume[t-20])",
+      "same_timeframe_bars": true,
+      "current_bar_excluded_from_average": true
+    },
+    "completed_bar_only": true,
+    "entry_execution": "next_bar_open",
+    "cost_model": {"commission_bps_each_side": 10, "slippage_bps_each_side": 10},
+    "same_bar_stop_target_priority": "STOP_FIRST",
+    "initial_risk_clamp_atr": {"min": 0.6, "max": 2.6},
+    "allocation": {"tp1": 0.3, "tp2": 0.3, "tp3": 0.2, "runner": 0.2},
+    "tp1_break_even": false,
+    "overlapping_trades_same_symbol": false,
+    "true_forward_validation": "future unseen bars only"
+  },
+  "timeframes": {
+    "15m": {"status": "REJECT"},
+    "30m": {"status": "REJECT"},
+    "45m": {"status": "REJECT"},
+    "1H": {"status": "REJECT"},
+    "2H": {"status": "REJECT"},
+    "4H": {
+      "status": "ACTIVE_SECONDARY",
+      "entry": {
+        "tenkan_kijun": "fresh_bullish_crossover",
+        "kumo_position": "inside",
+        "adx14": {"gt": 20, "upper_bound": null},
+        "bollinger": "Lower < Close < Upper",
+        "rvol20_gt": 1.2
+      },
+      "exit": {
+        "family": "ichimoku_kijun_tighten",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 9, "atr_buffer": 0.25},
+        "targets_r": [1.1, 2.2, 3.3],
+        "normal_trail_after_tp2_atr": 1.8,
+        "kijun_loss_tighten": {
+          "trigger": "Close < Kijun",
+          "trail_atr": 1.2,
+          "sticky_once_triggered": true
+        },
+        "technical_hard_exit": null,
+        "max_hold_bars": 60,
+        "tp1_break_even": false
+      },
+      "validation": {
+        "trades": 415,
+        "profit_factor": 1.8892386529,
+        "expectancy_r": 0.2395645676,
+        "win_rate_pct": 47.2289,
+        "positive_folds": 4,
+        "worst_fold_expectancy_r": 0.1451251226,
+        "note": "Entry alone was not robust; Ichimoku Kijun-based risk management materially creates the 4/4 result. Keep secondary, not primary."
+      }
+    },
+    "1D": {
+      "status": "ACTIVE",
+      "entry": {
+        "tenkan_kijun": "fresh_bullish_crossover",
+        "kumo_position": "below_cloud_bottom",
+        "adx14": {"gte": 20, "lte": 35},
+        "bollinger": "Basis < Close < Upper",
+        "rvol20_gt": 1.5,
+        "interpretation": "early recovery below Kumo, not classical above-cloud confirmation"
+      },
+      "exit": {
+        "family": "structural",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 9, "atr_buffer": 0.2},
+        "targets_r": [1.1, 2.2, 3.3],
+        "trail_after_tp2_atr": 2.0,
+        "technical_hard_exit": null,
+        "max_hold_bars": 40,
+        "tp1_break_even": false
+      },
+      "validation": {
+        "trades": 320,
+        "profit_factor": 1.9273302224,
+        "expectancy_r": 0.4081942072,
+        "win_rate_pct": 50.9375,
+        "positive_folds": 4,
+        "worst_fold_expectancy_r": 0.2603872356
+      }
+    },
+    "1W": {
+      "status": "ACTIVE",
+      "entry": {
+        "tenkan_kijun": "fresh_bullish_crossover",
+        "kumo_position": "above_cloud_top",
+        "adx14": {"gte": 20, "lte": 35},
+        "bollinger_filter": null,
+        "rvol20_gt": 1.5,
+        "interpretation": "above-Kumo trend continuation / confirmation"
+      },
+      "exit": {
+        "family": "structural",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 11, "atr_buffer": 0.2},
+        "targets_r": [1.1, 2.2, 3.3],
+        "trail_after_tp2_atr": 2.5,
+        "technical_hard_exit": null,
+        "max_hold_bars": 80,
+        "tp1_break_even": false
+      },
+      "validation": {
+        "trades": 401,
+        "profit_factor": 4.1018069065,
+        "expectancy_r": 0.9934321970,
+        "win_rate_pct": 63.5910,
+        "positive_folds": 4,
+        "worst_fold_expectancy_r": 0.3860965262
+      }
+    },
+    "1M": {
+      "status": "INSUFFICIENT_SAMPLE_RESEARCH"
+    }
+  },
+  "cloud_position_findings": {
+    "1D_original_filters_below": {"trades": 595, "profit_factor": 1.314, "expectancy_r": 0.1663, "positive_folds": 4, "worst_fold_expectancy_r": 0.0302},
+    "1W_original_filters_above": {"trades": 245, "profit_factor": 3.174, "expectancy_r": 0.7505, "positive_folds": 4, "worst_fold_expectancy_r": 0.0744},
+    "1W_original_filters_no_cloud": {"trades": 538, "profit_factor": 3.670, "expectancy_r": 0.8814, "positive_folds": 4, "worst_fold_expectancy_r": 0.0216},
+    "conclusion": "Kumo position is timeframe-dependent: daily edge is early recovery below cloud; weekly edge is confirmed trend continuation above cloud."
+  },
+  "break_even_final": {
+    "4H": {"no_be_expectancy_r": 0.239565, "entry_be_expectancy_r": 0.194037, "cost_be_expectancy_r": 0.183648, "decision": "NO_BE"},
+    "1D": {"no_be_expectancy_r": 0.408194, "entry_be_expectancy_r": 0.365724, "cost_be_expectancy_r": 0.357903, "decision": "NO_BE"},
+    "1W": {"no_be_expectancy_r": 0.993432, "entry_be_expectancy_r": 0.837434, "cost_be_expectancy_r": 0.835862, "decision": "NO_BE"}
+  },
+  "research_runs": {
+    "cloud_position_stage": 34160686639,
+    "filter_stage": 34160894762,
+    "sat_robustness": 34161108810,
+    "weekly_structural_final": 34161285218,
+    "be_ab_4h_1d": 34161458031,
+    "weekly_optimized_be_final": 34161660133
+  }
+}
