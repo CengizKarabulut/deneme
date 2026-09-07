@@ -1,0 +1,55 @@
+name: Stoch Momentum Volume Fixed Robustness
+run-name: "Stoch/MOM/Hacim · fixed robustness · ${{ github.run_id }}"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/stoch-momentum-volume-fixed-bootstrap"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        period: ["4H", "1D", "1W", "1M"]
+    defaults:
+      run:
+        working-directory: experiments/stoch_rsi_momentum_volume
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Bagimliliklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pandas>=2.0" "numpy>=1.24"
+      - name: Gecmis veri
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PERIOD: ${{ matrix.period }}
+        run: |
+          set -euo pipefail
+          mkdir -p data /tmp/history
+          name="historical-live-${PERIOD}"
+          id="$(gh api "repos/CengizKarabulut/taramabot/actions/artifacts?name=${name}&per_page=100" | jq -r '[.artifacts[]|select(.expired==false)]|sort_by(.created_at)|last|.id // empty')"
+          test -n "$id"
+          gh api "repos/CengizKarabulut/taramabot/actions/artifacts/${id}/zip" > /tmp/history.zip
+          unzip -q -o /tmp/history.zip -d /tmp/history
+          cp "$(find /tmp/history -type f -name '*.sqlite' | head -n1)" "data/historical_${PERIOD}.sqlite"
+      - name: Fixed robustness
+        run: |
+          mkdir -p reports/fixed-robustness
+          python stoch_momentum_volume_fixed_robustness.py --db "data/historical_${{ matrix.period }}.sqlite" --period "${{ matrix.period }}" --output "reports/fixed-robustness/${{ matrix.period }}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stoch-momentum-volume-fixed-${{ matrix.period }}-${{ github.run_id }}
+          path: experiments/stoch_rsi_momentum_volume/reports/fixed-robustness/${{ matrix.period }}.json
+          retention-days: 30
