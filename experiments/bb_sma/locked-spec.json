@@ -1,0 +1,117 @@
+{
+  "scan_id": "bb_sma_reclaim_v1",
+  "name": "BB & SMA",
+  "status": "LOCKED_RESEARCH_DECISION",
+  "locked_at": "2026-09-07",
+  "common": {
+    "signal_on_completed_bar": true,
+    "entry_reference": "next_bar_open",
+    "commission_bps_per_side": 10.0,
+    "slippage_bps_per_side": 10.0,
+    "same_bar_stop_target_priority": "stop",
+    "risk_min_atr": 0.60,
+    "risk_max_atr": 2.60,
+    "tp_allocations": [0.30, 0.30, 0.20],
+    "runner_allocation": 0.20,
+    "tp1_break_even": false
+  },
+  "timeframes": {
+    "15m": {"status": "REJECT"},
+    "30m": {"status": "REJECT"},
+    "45m": {"status": "REJECT"},
+    "1H": {"status": "REJECT"},
+    "2H": {
+      "status": "ACTIVE",
+      "entry": {
+        "close_crosses_above_sma20": true,
+        "sma_order": "SMA20>SMA50>SMA200",
+        "sma20_rising": true,
+        "volume_rule": "Volume[t] > mean(Volume[t-1:t-10])"
+      },
+      "exit": {
+        "mode": "adaptive",
+        "swing_lookback": 7,
+        "atr_buffer": 0.18,
+        "tp_r": [1.0, 2.0, 3.0],
+        "trail_atr": 1.90,
+        "tight_trail_atr_after_close_below_sma20": 1.40,
+        "hard_exit": "close_below_sma50",
+        "max_hold_bars": 40
+      }
+    },
+    "4H": {
+      "status": "ACTIVE",
+      "entry": {
+        "close_crosses_above_sma20": true,
+        "sma_order": "SMA20>SMA50>SMA200",
+        "sma20_rising": false,
+        "volume_rule": "Volume[t] > mean(Volume[t-1:t-10])"
+      },
+      "exit": {
+        "mode": "adaptive",
+        "swing_lookback": 7,
+        "atr_buffer": 0.20,
+        "tp_r": [1.0, 2.0, 3.0],
+        "trail_atr": 2.00,
+        "tight_trail_atr_after_close_below_sma20": 1.50,
+        "hard_exit": "close_below_sma50",
+        "max_hold_bars": 40
+      }
+    },
+    "1D": {
+      "status": "ACTIVE",
+      "entry": {
+        "close_crosses_above_sma20": true,
+        "sma_order": "SMA20>SMA50>SMA200",
+        "sma20_rising": true,
+        "volume_rule": "Volume[t] > mean(Volume[t-1:t-10])"
+      },
+      "exit": {
+        "mode": "adaptive",
+        "swing_lookback": 7,
+        "atr_buffer": 0.20,
+        "tp_r": [1.0, 2.0, 3.0],
+        "trail_atr": 2.20,
+        "tight_trail_atr_after_close_below_sma20": 1.65,
+        "hard_exit": "close_below_sma50",
+        "max_hold_bars": 40
+      }
+    },
+    "1W": {
+      "status": "ACTIVE",
+      "entry": {
+        "close_crosses_above_sma20": true,
+        "sma_order": "SMA20>SMA50>SMA200",
+        "sma20_rising": false,
+        "volume_rule": "Volume[t] > mean(Volume[t-1:t-10])"
+      },
+      "exit": {
+        "mode": "structural_control",
+        "swing_lookback": 11,
+        "atr_buffer": 0.15,
+        "tp_r": [1.1, 2.2, 3.3],
+        "trail_atr": 2.10,
+        "hard_exit": null,
+        "max_hold_bars": 60
+      }
+    },
+    "1M": {
+      "status": "RESEARCH_FORWARD_WATCH",
+      "entry": {
+        "close_crosses_above_sma20": true,
+        "sma_order": "SMA20>SMA50>SMA200",
+        "sma20_rising": false,
+        "volume_rule": null
+      },
+      "exit": {
+        "mode": "ma_cross_research",
+        "swing_lookback": 9,
+        "atr_buffer": 0.15,
+        "tp_r": [1.0, 2.0, 3.0],
+        "trail_atr": 2.50,
+        "hard_exit": "sma20_crosses_below_sma50",
+        "max_hold_bars": 36
+      }
+    }
+  }
+}
