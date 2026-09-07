@@ -1,0 +1,64 @@
+name: TavanTarama TP1 BE A/B
+run-name: "TavanTarama · TP1 BE · ${{ github.run_id }}"
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/tavan-be-bootstrap"
+permissions:
+  actions: read
+  contents: read
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        candidate: ["4H_orig","1D","1W"]
+    defaults:
+      run:
+        working-directory: experiments/tavan_tarama
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Bagimliliklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pandas>=2.0" "numpy>=1.24"
+      - name: Gecmis veri
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CAND: ${{ matrix.candidate }}
+        run: |
+          set -euo pipefail
+          case "$CAND" in
+            4H_orig) PERIOD="4H" ;;
+            1D) PERIOD="1D" ;;
+            1W) PERIOD="1W" ;;
+          esac
+          mkdir -p data /tmp/history
+          name="historical-live-${PERIOD}"
+          id="$(gh api "repos/CengizKarabulut/taramabot/actions/artifacts?name=${name}&per_page=100" | jq -r '[.artifacts[]|select(.expired==false)]|sort_by(.created_at)|last|.id // empty')"
+          test -n "$id"
+          gh api "repos/CengizKarabulut/taramabot/actions/artifacts/${id}/zip" > /tmp/history.zip
+          rm -rf /tmp/history/*
+          unzip -q -o /tmp/history.zip -d /tmp/history
+          db="$(find /tmp/history -type f -name '*.sqlite' | head -n1)"
+          test -n "$db"
+          cp "$db" "data/historical_${PERIOD}.sqlite"
+          echo "PERIOD=${PERIOD}" >> "$GITHUB_ENV"
+      - name: TP1 BE A/B
+        run: |
+          mkdir -p reports/be
+          python tavan_be_ab.py \
+            --db "data/historical_${PERIOD}.sqlite" \
+            --candidate "${{ matrix.candidate }}" \
+            --output "reports/be/${{ matrix.candidate }}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tavan-be-${{ matrix.candidate }}-${{ github.run_id }}
+          path: experiments/tavan_tarama/reports/be/${{ matrix.candidate }}.json
+          retention-days: 30
