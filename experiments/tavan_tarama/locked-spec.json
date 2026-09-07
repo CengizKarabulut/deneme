@@ -1,0 +1,118 @@
+{
+  "scan_id": "tavan_tarama_v1",
+  "name": "8 - TavanTarama",
+  "status": "LOCKED",
+  "research_date": "2026-09-07",
+  "common": {
+    "dmi_adx_period": 14,
+    "rsi_period": 14,
+    "stoch_rsi": {"k_smooth": 3, "d_smooth": 3, "rsi_length": 14, "stoch_length": 14},
+    "rvol20": {
+      "formula": "Volume[t] / mean(Volume[t-1]..Volume[t-20])",
+      "same_timeframe_bars": true,
+      "current_bar_excluded_from_average": true
+    },
+    "original_dmi_trigger": "+DI > -DI AND +DI[t] > ADX[t] AND +DI[t-1] <= ADX[t-1]",
+    "alternative_dmi_trigger_tested": "+DI[t] > -DI[t] AND +DI[t-1] <= -DI[t-1] AND ADX[t] > ADX[t-1]",
+    "selected_dmi_family_for_active_timeframes": "original_pdi_cross_adx",
+    "completed_bar_only": true,
+    "entry_execution": "next_bar_open",
+    "cost_model": {"commission_bps_each_side": 10, "slippage_bps_each_side": 10},
+    "initial_risk_clamp_atr": {"min": 0.6, "max": 2.6},
+    "same_bar_stop_target_priority": "STOP_FIRST",
+    "allocation": {"tp1": 0.3, "tp2": 0.3, "tp3": 0.2, "runner": 0.2},
+    "tp1_break_even": false,
+    "true_forward_validation": "future unseen bars only"
+  },
+  "timeframes": {
+    "15m": {"status": "REJECT"},
+    "30m": {"status": "REJECT"},
+    "45m": {"status": "REJECT"},
+    "1H": {"status": "REJECT"},
+    "2H": {"status": "REJECT"},
+    "4H": {
+      "status": "RESEARCH_SECONDARY",
+      "entry": {
+        "dmi_trigger": "original_pdi_cross_adx",
+        "plus_di_gt_minus_di": true,
+        "rsi": {"gte": 50, "lt": 70},
+        "stoch_rsi": "K > D confirmation",
+        "rvol20_gt": 1.2
+      },
+      "exit": {
+        "family": "adx_tighten",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 9, "atr_buffer": 0.25},
+        "targets_r": [1.1, 2.2, 3.3],
+        "normal_trail_after_tp2_atr": 1.8,
+        "adx_fade_tighten": {"trigger": "ADX[t] < ADX[t-1] < ADX[t-2]", "trail_atr": 1.3, "sticky_once_triggered": true},
+        "technical_hard_exit": null,
+        "max_hold_bars": 60,
+        "tp1_break_even": false
+      },
+      "validation": {"trades": 5496, "profit_factor": 1.409460553, "expectancy_r": 0.107982585, "positive_folds": 3, "worst_fold_expectancy_r": -0.006093322, "note": "Near-stable but one chronological fold remains slightly negative; not ACTIVE"}
+    },
+    "1D": {
+      "status": "ACTIVE",
+      "entry": {
+        "dmi_trigger": "original_pdi_cross_adx",
+        "plus_di_gt_minus_di": true,
+        "rsi": {"gte": 50, "lt": 70},
+        "stoch_rsi": "fresh_K_crosses_above_D",
+        "rvol20_gt": 1.5
+      },
+      "exit": {
+        "family": "adx_tighten",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 9, "atr_buffer": 0.25},
+        "targets_r": [1.1, 2.2, 3.3],
+        "normal_trail_after_tp2_atr": 2.0,
+        "adx_fade_tighten": {"trigger": "ADX[t] < ADX[t-1] < ADX[t-2]", "trail_atr": 1.5, "sticky_once_triggered": true},
+        "technical_hard_exit": null,
+        "max_hold_bars": 40,
+        "tp1_break_even": false
+      },
+      "validation": {"trades": 1030, "profit_factor": 1.7661313165, "expectancy_r": 0.2153441433, "win_rate_pct": 45.7282, "positive_folds": 4, "worst_fold_expectancy_r": 0.131385346}
+    },
+    "1W": {
+      "status": "ACTIVE",
+      "entry": {
+        "dmi_trigger": "original_pdi_cross_adx",
+        "plus_di_gt_minus_di": true,
+        "rsi": {"gte": 40, "lt": 70},
+        "stoch_rsi": "K > D confirmation",
+        "rvol20_gt": 1.5
+      },
+      "exit": {
+        "family": "structural",
+        "initial_stop": {"type": "swing_low_minus_atr", "lookback_bars": 11, "atr_buffer": 0.15},
+        "targets_r": [1.1, 2.2, 3.3],
+        "trail_after_tp2_atr": 2.1,
+        "technical_hard_exit": null,
+        "max_hold_bars": 80,
+        "tp1_break_even": false
+      },
+      "validation": {"trades": 1104, "profit_factor": 3.3014421382, "expectancy_r": 0.8386910653, "win_rate_pct": 58.8768, "positive_folds": 4, "worst_fold_expectancy_r": 0.257265233}
+    },
+    "1M": {
+      "status": "RESEARCH_FORWARD_WATCH",
+      "entry": {
+        "dmi_trigger": "original_pdi_cross_adx",
+        "plus_di_gt_minus_di": true,
+        "rsi": {"gte": 30, "lt": 70},
+        "stoch_rsi": "K > D confirmation",
+        "rvol20_gt": 1.2
+      },
+      "validation": {"trades": 56, "profit_factor": 4.7443824234, "expectancy_r": 0.8672343381, "positive_folds": 3, "worst_fold_expectancy_r": -0.770809624, "caveat": "Small sample and severe negative chronological fold"}
+    }
+  },
+  "dmi_head_to_head": {
+    "1D": {"original": {"pf": 1.3350, "expectancy_r": 0.1705, "positive_folds": 4}, "alternative": {"pf": 1.2358, "expectancy_r": 0.1236, "positive_folds": 3}, "decision": "ORIGINAL"},
+    "1W": {"original": {"pf": 2.5832, "expectancy_r": 0.6452, "positive_folds": 4}, "alternative": {"pf": 2.4655, "expectancy_r": 0.5469, "positive_folds": 4}, "decision": "ORIGINAL"},
+    "4H_after_sat": {"original": {"trades": 5496, "pf": 1.4095, "expectancy_r": 0.1080, "positive_folds": 3, "worst_fold_expectancy_r": -0.0061}, "alternative": {"trades": 879, "pf": 1.6758, "expectancy_r": 0.1926, "positive_folds": 3, "worst_fold_expectancy_r": -0.1041}, "decision": "ORIGINAL_AS_RESEARCH_REFERENCE"}
+  },
+  "break_even_final": {
+    "4H": {"no_be_expectancy_r": 0.107983, "entry_be_expectancy_r": 0.084149, "cost_be_expectancy_r": 0.083111, "decision": "NO_BE"},
+    "1D": {"no_be_expectancy_r": 0.215344, "entry_be_expectancy_r": 0.179816, "cost_be_expectancy_r": 0.177439, "decision": "NO_BE"},
+    "1W": {"no_be_expectancy_r": 0.838691, "entry_be_expectancy_r": 0.700899, "cost_be_expectancy_r": 0.698982, "decision": "NO_BE"}
+  },
+  "research_runs": {"entry_stage": 34159048200, "sat_robustness": 34159383049, "be_ab": 34159832908}
+}
