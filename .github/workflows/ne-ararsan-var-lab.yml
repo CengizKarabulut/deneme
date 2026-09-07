@@ -1,5 +1,5 @@
 name: NE ARARSAN VAR Lab
-run-name: "NE ARARSAN VAR lab · ${{ inputs.experiment || 'histogram' }} · ${{ inputs.period || '1D' }} · ${{ github.run_id }}"
+run-name: "NE ARARSAN VAR lab · ${{ inputs.experiment || 'robustness' }} · ${{ inputs.period || 'all' }} · ${{ github.run_id }}"
 
 on:
   workflow_dispatch:
@@ -7,9 +7,10 @@ on:
       experiment:
         description: "Araştırma türü"
         required: true
-        default: histogram
+        default: robustness
         type: choice
         options:
+          - robustness
           - histogram
           - baseline
           - exit_optimize
@@ -39,7 +40,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ne-ararsan-var-lab-${{ inputs.experiment || 'histogram' }}-${{ inputs.period || '1D' }}
+  group: ne-ararsan-var-lab-${{ inputs.experiment || 'robustness' }}-${{ inputs.period || 'all' }}
   cancel-in-progress: false
 
 jobs:
@@ -53,8 +54,8 @@ jobs:
         period: ["15m", "30m", "45m", "1H", "2H", "4H", "1D", "1W", "1M"]
 
     env:
-      EXPERIMENT: ${{ inputs.experiment || 'histogram' }}
-      REQUESTED_PERIOD: ${{ inputs.period || '1D' }}
+      EXPERIMENT: ${{ inputs.experiment || 'robustness' }}
+      REQUESTED_PERIOD: ${{ inputs.period || 'all' }}
       SOURCE_REPOSITORY: CengizKarabulut/taramabot
 
     steps:
@@ -70,6 +71,12 @@ jobs:
           if [ "${EXPERIMENT}" = "tf_exit" ]; then
             case "${{ matrix.period }}" in
               15m|30m|45m|1H|2H) ;;
+              *) run=false ;;
+            esac
+          fi
+          if [ "${EXPERIMENT}" = "robustness" ]; then
+            case "${{ matrix.period }}" in
+              1D|1W) ;;
               *) run=false ;;
             esac
           fi
@@ -132,7 +139,8 @@ jobs:
             ne_ararsan_var_research.py \
             ne_ararsan_var_optimize.py \
             ne_ararsan_var_tf_exit_research.py \
-            ne_ararsan_var_histogram_wf.py
+            ne_ararsan_var_histogram_wf.py \
+            ne_ararsan_var_histogram_robustness.py
 
       - name: Araştırmayı çalıştır
         if: steps.gate.outputs.run == 'true'
@@ -146,6 +154,9 @@ jobs:
           out="results/${EXPERIMENT}/${PERIOD}.json"
 
           case "${EXPERIMENT}" in
+            robustness)
+              python ne_ararsan_var_histogram_robustness.py --db "${db}" --period "${PERIOD}" --output "${out}"
+              ;;
             histogram)
               python ne_ararsan_var_histogram_wf.py --db "${db}" --period "${PERIOD}" --output "${out}"
               ;;
