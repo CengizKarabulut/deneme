@@ -1,6 +1,7 @@
 # 13 - MACD YenidenHareket — Nihai Karar
 
-Tarih: 2026-09-08
+Tarih: 2026-09-08  
+Durum: **LOCKED**
 
 ## Giriş adayları
 
@@ -19,45 +20,33 @@ Tarih: 2026-09-08
 - Histogram[t] > Histogram[t-1] > Histogram[t-2]
 - yalnız yeni başlayan histogram-ivme epizodu sinyal sayılır
 
-A/B/C aynı yapısal SAT kontrol profili, aynı maliyet modeli ve her varyantın kendi sinyal zamanlarından oluşan dört kronolojik pencereyle karşılaştırıldı.
+A/B/C aynı yapısal SAT kontrol profili, aynı maliyet modeli ve her varyantın kendi sinyal zamanlarından oluşan dört kronolojik pencereyle karşılaştırıldı. B, A'ya karşı anlamlı ve kalıcı bir ek avantaj üretmediği için final kurallarda kullanılmıyor.
 
-## Giriş aşaması özeti
+## Nihai timeframe kararları
 
-| TF | En anlamlı sonuç | PF | E(R) | Fold | Karar |
-|---|---|---:|---:|---:|---|
-| 15m | tüm A/B/C negatif | < 1 | negatif | 0/4 | REJECT |
-| 30m | tüm A/B/C negatif | < 1 | negatif | 0/4 | REJECT |
-| 45m | tüm A/B/C negatif | < 1 | negatif | 0/4 | REJECT |
-| 1H | tüm A/B/C negatif | < 1 | negatif | 0/4 | REJECT |
-| 2H | B en yakını | 0.977 | -0.015 | 1/4 | REJECT |
-| 4H | C | 1.158 | +0.084 | 3/4 | SAT research |
-| 1D | C | 1.538 | +0.256 | 4/4 | güçlü |
-| 1W | A | 3.021 | +0.707 | 4/4 | güçlü |
-| 1M | A | 3.538 | +0.694 | 4/4 | küçük/dağılımı zayıf örneklem |
+| TF | Final giriş | Statü | Final PF | E(R) | Kazanma | Fold |
+|---|---|---|---:|---:|---:|---:|
+| 15m | — | REJECT | — | negatif | — | 0/4 |
+| 30m | — | REJECT | — | negatif | — | 0/4 |
+| 45m | — | REJECT | — | negatif | — | 0/4 |
+| 1H | — | REJECT | — | negatif | — | 0/4 |
+| 2H | B en yakın aday | REJECT | 0.977 | -0.015 | — | 1/4 |
+| 4H | C | ACTIVE_SECONDARY | 3.453 | +0.446R | %66.65 | 4/4 |
+| 1D | C | ACTIVE | 4.296 | +0.536R | %69.18 | 4/4 |
+| 1W | A | ACTIVE | 3.021 | +0.707R | %58.70 | 4/4 |
+| 1M | A | RESEARCH_FORWARD_WATCH | 3.538 | +0.694R | %61.18 | 4/4 |
 
-4H'de A'nın ham yapısal sonucu C'den daha yüksek toplam PF/E üretse de yalnız 2/4 pozitif dönemdi. C 3/4 idi ve MACD tabanlı SAT altında hem A'yı geçti hem 4/4'e ulaştı. Bu nedenle 4H final giriş C'dir.
+4H ham yapısal girişte 12.510 işlem, PF 1.158, +0.084R ve 3/4 pozitif dönem verdi. MACD tabanlı adaptif yönetimle 4/4'e çıktığı için PRIMARY yerine **ACTIVE_SECONDARY** tutulur.
 
-1D'de C açık biçimde kazandı: yapısal kontrol altında 10.241 işlem, PF 1.538, +0.256R ve 4/4 pozitif dönem.
+1D'de C yapısal kontrol altında zaten 10.241 işlem, PF 1.538, +0.256R ve 4/4 pozitif dönem üretti; adaptif risk yönetimi bunu daha da güçlendirdi.
 
-1W'de orijinal A en iyi toplam edge'i verdi. B ve C de 4/4 kaldı ancak toplam expectancy/PF daha düşüktü; orijinal sade kural korundu.
-
-1M'de A güçlü görünse de final yapısal simülasyonda yalnız 152 işlem vardır ve kronolojik dönem dağılımı eşit değildir (bir fold yalnız yaklaşık 12 tamamlanmış işlem içerir). Bu nedenle production ACTIVE yapılmadı.
+1W'de orijinal A en sade ve en sağlam seçim kaldı. 1M de pozitif görünse de yalnız 152 tamamlanmış işlem ve dengesiz kronolojik dağılım nedeniyle production'a alınmadı.
 
 ## 4H — ACTIVE_SECONDARY
 
-Nihai giriş C:
-
-- MACD Level > 0
-- MACD Level > Signal
-- Histogram[t] > Histogram[t-1] > Histogram[t-2]
-- koşulun yalnız yeni başlayan epizodu sinyaldir
-
-Ham yapısal giriş: 12.510 işlem, PF 1.158, +0.084R, 3/4 pozitif; worst-fold -0.107R.
-
-MACD Level'ın Signal altına düşmesini hard-SAT yapmak yerine trailing'i sıkılaştırmak çok daha iyi çalıştı.
+Final giriş: **C — positive histogram reacceleration**.
 
 Final SAT:
-
 - ilk stop: son 7 adet 4H swing low - 0.20 ATR
 - fallback stop: 1.20 ATR
 - ilk risk 0.60–2.60 ATR arasında sınırlandırılır
@@ -66,84 +55,58 @@ Final SAT:
 - TP3 = 3.0R, %20
 - runner = %20
 - TP2 sonrası normal trailing = 2.0 ATR
-- MACD Level < Signal olursa trailing = 1.0 ATR olur ve tekrar gevşemez
-- MACD zayıflaması tight trailing'i TP2'den önce de aktive edebilir
+- MACD Level < Signal olduğunda sticky tight trailing = **0.5 ATR**
+- tight trailing TP2'den önce de aktive olabilir ve tekrar gevşemez
 - teknik hard exit yok
 - maksimum taşıma = 40 adet 4H bar
 - TP1 sonrası break-even yok
 
-Tight-trail plateau taramasında 1.8 ATR'den 0.8 ATR'ye kadar sıkılaştırıldıkça tarihsel PF, expectancy ve worst-fold monoton iyileşti. 0.8 ATR tarihsel olarak daha yüksek sonuç vermesine rağmen production'da sınır optimumunu kovalamamak ve whipsaw riskini azaltmak için 1.0 ATR doğal alt sınır olarak seçildi.
+Genişletilmiş tight-trail taramasında 0.4–1.0 ATR aralığındaki bütün adaylar 4/4 pozitif kaldı ve sıkılaştıkça tarihsel sonuç iyileşti. 0.4 ATR sınır optimumunu kovalamamak için komşu ve daha muhafazakâr **0.5 ATR** kilitlendi.
 
-Final: **16.604 işlem, PF 2.437, +0.327R, %57.75 kazanma, 4/4 pozitif, worst-fold +0.270R.**
-
-Ham giriş 3/4 iken MACD tabanlı risk yönetimiyle 4/4'e çıktığı için 4H PRIMARY değil, **ACTIVE_SECONDARY** tutulur.
+Final NO-BE: **16.687 işlem, PF 3.453, +0.446R, medyan +0.384R, %66.65 kazanma, 4/4 pozitif, worst-fold +0.390R.**
 
 ## 1D — ACTIVE
 
-Nihai giriş C aynıdır.
-
-Ham yapısal giriş: 10.241 işlem, PF 1.538, +0.256R, 4/4 pozitif; worst-fold +0.116R.
+Final giriş: **C — positive histogram reacceleration**.
 
 Final SAT:
-
 - ilk stop: son 7 günlük swing low - 0.20 ATR
 - fallback stop: 1.25 ATR
-- TP1 = 1.0R, %30
-- TP2 = 2.0R, %30
-- TP3 = 3.0R, %20
-- runner = %20
+- TP1 / TP2 / TP3 = 1.0R / 2.0R / 3.0R
+- dağılım %30 / %30 / %20 + %20 runner
 - TP2 sonrası normal trailing = 2.2 ATR
-- MACD Level < Signal olursa trailing = 1.0 ATR olur ve tekrar gevşemez
-- MACD zayıflaması tight trailing'i TP2'den önce de aktive edebilir
+- MACD Level < Signal olduğunda sticky tight trailing = **0.5 ATR**
 - teknik hard exit yok
 - maksimum taşıma = 40 günlük bar
 - TP1 sonrası break-even yok
 
-1D tight-trail plateau da 1.8 → 0.8 ATR boyunca monoton iyileşti. 0.8 ATR'de PF 3.477 / +0.464R görülmesine rağmen aynı anti-overfit/whipsaw gerekçesiyle production alt sınırı 1.0 ATR'de tutuldu.
+1D'de de 0.4–1.0 ATR alt plateau 4/4 pozitif kaldı. Aynı anti-overfit gerekçesiyle sınırdaki 0.4 yerine **0.5 ATR** kilitlendi.
 
-Final: **13.621 işlem, PF 3.022, +0.419R, %59.46 kazanma, 4/4 pozitif, worst-fold +0.330R.**
+Final NO-BE: **13.705 işlem, PF 4.296, +0.536R, medyan +0.435R, %69.18 kazanma, 4/4 pozitif, worst-fold +0.448R.**
 
 ## 1W — ACTIVE
 
-Nihai giriş A — orijinal:
-
-- MACD Level > 0
-- MACD Level fresh crosses above Signal
-
-Haftalıkta MACD<Signal tabanlı tight/hard exit toplam expectancy'yi düşürdü. Sade yapısal yönetim kazandı.
+Final giriş: **A — original positive-zone bullish MACD cross**.
 
 Final SAT:
-
 - ilk stop: son 9 haftalık swing low - 0.15 ATR
 - fallback stop: 1.30 ATR
-- TP1 = 1.0R, %30
-- TP2 = 2.0R, %30
-- TP3 = 3.0R, %20
-- runner = %20
+- TP1 / TP2 / TP3 = 1.0R / 2.0R / 3.0R
+- dağılım %30 / %30 / %20 + %20 runner
 - TP2 sonrası 2.3 ATR trailing
-- teknik hard exit yok
+- teknik hard exit / MACD tighten yok
 - maksimum taşıma = 60 haftalık bar
 - TP1 sonrası break-even yok
 
-Dar komşulukta swing11/buffer0.20/trail2.1/1.1-2.2-3.3R profili +0.742R verdi; baseline +0.707R idi. Ancak worst-fold yalnız +0.006R iyileşti ve daha fazla parametre değişikliği gerektirdi. Materiality/complexity gate nedeniyle sade baseline korundu.
-
-Final: **1.949 işlem, PF 3.021, +0.707R, %58.70 kazanma, 4/4 pozitif, worst-fold +0.270R.**
+Final NO-BE: **1.949 işlem, PF 3.021, +0.707R, medyan +1.262R, %58.70 kazanma, 4/4 pozitif, worst-fold +0.270R.**
 
 ## 1M — RESEARCH_FORWARD_WATCH
 
-Nihai araştırma girişi A — orijinal.
+Final araştırma girişi: **A — original**.
 
-Yapısal baseline:
+Yapısal profil: swing 9, buffer 0.15 ATR, fallback 1.30 ATR, 1/2/3R hedefler, TP2 sonrası 2.5 ATR trail, maksimum 36 aylık bar, NO-BE.
 
-- swing 9
-- buffer 0.15 ATR
-- fallback stop 1.30 ATR
-- TP1/TP2/TP3 = 1/2/3R
-- trail 2.5 ATR
-- max hold 36 aylık bar
-- NO-BE
-
-Final tarihsel sonuç: **152 işlem, PF 3.538, +0.694R, %61.18 kazanma, 4/4 pozitif, worst-fold +0.042R.**
+Final tarihsel sonuç: **152 işlem, PF 3.538, +0.694R, medyan +0.900R, %61.18 kazanma, 4/4 pozitif, worst-fold +0.042R.**
 
 Örneklem küçük ve fold dağılımı dengesiz olduğundan ACTIVE değildir; yeni aylık sinyallerle forward-watch tutulur.
 
@@ -151,20 +114,12 @@ Final tarihsel sonuç: **152 işlem, PF 3.538, +0.694R, %61.18 kazanma, 4/4 pozi
 
 | TF | NO-BE E(R) | Entry-BE E(R) | Cost-BE E(R) | Karar |
 |---|---:|---:|---:|---|
-| 4H | +0.327 | +0.260 | +0.256 | NO-BE |
-| 1D | +0.419 | +0.355 | +0.353 | NO-BE |
+| 4H | +0.446 | +0.361 | +0.355 | NO-BE |
+| 1D | +0.536 | +0.456 | +0.452 | NO-BE |
 | 1W | +0.707 | +0.612 | +0.612 | NO-BE |
 | 1M | +0.694 | +0.570 | +0.572 | NO-BE / research |
 
-BE bazı timeframe'lerde kazanma oranını artırsa da expectancy ve worst-fold avantajını düşürdü. TP1 sonrası stop giriş veya maliyet seviyesine taşınmaz.
-
-## Nihai timeframe kararları
-
-- 15m / 30m / 45m / 1H / 2H: **REJECT**
-- 4H: **ACTIVE_SECONDARY — C histogram reacceleration**
-- 1D: **ACTIVE — C histogram reacceleration**
-- 1W: **ACTIVE — A original MACD positive-zone bullish cross**
-- 1M: **RESEARCH_FORWARD_WATCH — A original**
+BE kazanma oranını bazı timeframe'lerde yükseltse de expectancy'yi düşürdü. Bu nedenle TP1 sonrası kalan pozisyon giriş veya maliyet seviyesine taşınmıyor.
 
 ## Ortak uygulama semantiği
 
@@ -181,8 +136,11 @@ BE bazı timeframe'lerde kazanma oranını artırsa da expectancy ve worst-fold 
 
 ## Run ID'leri
 
-- Entry A/B/C başarılı koşu: `34171064525`
+- Entry A/B/C: `34171064525`
 - SAT robustness: `34171281778`
-- 1D tight plateau: `34171774133`
-- 4H tight plateau: `34171925181`
-- TP1 BE final: `34172047673`
+- İlk 1D tight plateau: `34171774133`
+- İlk 4H tight plateau: `34171925181`
+- Genişletilmiş 4H lower plateau: `34172568338`
+- Genişletilmiş 1D lower plateau: `34172574886`
+- İlk TP1 BE kontrolü: `34172047673`
+- Final 0.5 ATR TP1 BE kontrolü: `34172922392`
