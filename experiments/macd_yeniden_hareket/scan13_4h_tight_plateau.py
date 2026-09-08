@@ -10,10 +10,10 @@ def analyze(db):
     b=bounds_for(times)
     base=baseline_profile("4H")
     rows=[]
-    for x in [0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8]:
+    for x in [0.4,0.5,0.6,0.7,0.8,0.9,1.0]:
         p=dict(base); p["tight"]=x
         rows.append(evaluate(frames,b,p,"macd_tighten"))
-    return {"version":"scan13-4h-tight-plateau-v1","period":"4H","entry":ENTRY,"signal_count":count,"rows":rows,
+    return {"version":"scan13-4h-tight-plateau-v2","period":"4H","entry":ENTRY,"signal_count":count,"rows":rows,
             "warning":"Historical observed data; future unseen bars are true forward validation."}
 
 def main():
