@@ -1,0 +1,98 @@
+{
+  "scan_id": "macd_yeniden_hareket_v1",
+  "scan_number": 13,
+  "name": "MACD YenidenHareket",
+  "status": "LOCKED",
+  "locked_at": "2026-09-08",
+  "common": {
+    "macd": [12, 26, 9],
+    "signal_bar": "completed_bar_only",
+    "entry_reference": "next_bar_open",
+    "same_symbol_overlap": "skip_new_signal_while_position_open",
+    "commission_bps_each_side": 10.0,
+    "slippage_bps_each_side": 10.0,
+    "same_bar_stop_target_priority": "STOP_FIRST",
+    "initial_risk_min_atr": 0.6,
+    "initial_risk_max_atr": 2.6,
+    "allocations": {
+      "tp1_pct": 30,
+      "tp2_pct": 30,
+      "tp3_pct": 20,
+      "runner_pct": 20
+    },
+    "tp1_break_even": "NO_BE",
+    "validation_note": "Historical data has been observed; future unseen bars are true independent forward validation."
+  },
+  "entry_definitions": {
+    "A_original_positive_macd_cross": {
+      "macd_level_gt_zero": true,
+      "fresh_cross": "MACD[t] > Signal[t] AND MACD[t-1] <= Signal[t-1]"
+    },
+    "B_positive_macd_and_signal_cross": {
+      "macd_level_gt_zero": true,
+      "macd_signal_gt_zero": true,
+      "fresh_cross": "MACD[t] > Signal[t] AND MACD[t-1] <= Signal[t-1]"
+    },
+    "C_positive_hist_reacceleration": {
+      "macd_level_gt_zero": true,
+      "macd_level_gt_signal": true,
+      "histogram": "H[t] > H[t-1] > H[t-2]",
+      "event_semantics": "fresh_episode_start_only"
+    }
+  },
+  "timeframes": {
+    "15m": {"status": "REJECT", "reason": "A/B/C all negative expectancy and 0/4 positive folds."},
+    "30m": {"status": "REJECT", "reason": "A/B/C all negative expectancy and 0/4 positive folds."},
+    "45m": {"status": "REJECT", "reason": "A/B/C all negative expectancy and 0/4 positive folds."},
+    "1H": {"status": "REJECT", "reason": "A/B/C all negative expectancy and 0/4 positive folds."},
+    "2H": {"status": "REJECT", "best_near_candidate": "B_positive_macd_and_signal_cross", "profit_factor": 0.977, "expectancy_r": -0.015, "positive_folds": "1/4"},
+    "4H": {
+      "status": "ACTIVE_SECONDARY",
+      "entry": "C_positive_hist_reacceleration",
+      "entry_structural_control": {"trades": 12510, "profit_factor": 1.158, "expectancy_r": 0.084, "positive_folds": "3/4", "worst_fold_expectancy_r": -0.107},
+      "exit_family": "macd_tighten",
+      "profile": {"stop_mode": "swing", "stop_atr_fallback": 1.2, "swing": 7, "buffer_atr": 0.2, "tp1_r": 1.0, "tp2_r": 2.0, "tp3_r": 3.0, "normal_trail_atr": 2.0, "tight_trail_atr": 1.0, "max_hold_bars": 40},
+      "management": "When MACD Level < Signal, enable sticky 1.0 ATR trailing; it may activate before TP2. No hard technical exit.",
+      "final_metrics": {"trades": 16604, "profit_factor": 2.4370932953, "expectancy_r": 0.3274576924, "win_rate_pct": 57.7511443, "positive_folds": "4/4", "worst_fold_expectancy_r": 0.2703371926},
+      "break_even": "NO_BE"
+    },
+    "1D": {
+      "status": "ACTIVE",
+      "entry": "C_positive_hist_reacceleration",
+      "entry_structural_control": {"trades": 10241, "profit_factor": 1.5383510860, "expectancy_r": 0.2560992270, "positive_folds": "4/4", "worst_fold_expectancy_r": 0.1161947796},
+      "exit_family": "macd_tighten",
+      "profile": {"stop_mode": "swing", "stop_atr_fallback": 1.25, "swing": 7, "buffer_atr": 0.2, "tp1_r": 1.0, "tp2_r": 2.0, "tp3_r": 3.0, "normal_trail_atr": 2.2, "tight_trail_atr": 1.0, "max_hold_bars": 40},
+      "management": "When MACD Level < Signal, enable sticky 1.0 ATR trailing; it may activate before TP2. No hard technical exit.",
+      "final_metrics": {"trades": 13621, "profit_factor": 3.0220506110, "expectancy_r": 0.4193134388, "win_rate_pct": 59.4596579, "positive_folds": "4/4", "worst_fold_expectancy_r": 0.3295414935},
+      "break_even": "NO_BE"
+    },
+    "1W": {
+      "status": "ACTIVE",
+      "entry": "A_original_positive_macd_cross",
+      "exit_family": "structural",
+      "profile": {"stop_mode": "swing", "stop_atr_fallback": 1.3, "swing": 9, "buffer_atr": 0.15, "tp1_r": 1.0, "tp2_r": 2.0, "tp3_r": 3.0, "trail_atr_after_tp2": 2.3, "max_hold_bars": 60},
+      "management": "No MACD hard exit or MACD tighten rule; structural management only.",
+      "final_metrics": {"trades": 1949, "profit_factor": 3.0214263541, "expectancy_r": 0.7065596815, "win_rate_pct": 58.6967676, "positive_folds": "4/4", "worst_fold_expectancy_r": 0.2700128045},
+      "break_even": "NO_BE"
+    },
+    "1M": {
+      "status": "RESEARCH_FORWARD_WATCH",
+      "entry": "A_original_positive_macd_cross",
+      "exit_family": "structural",
+      "profile": {"stop_mode": "swing", "stop_atr_fallback": 1.3, "swing": 9, "buffer_atr": 0.15, "tp1_r": 1.0, "tp2_r": 2.0, "tp3_r": 3.0, "trail_atr_after_tp2": 2.5, "max_hold_bars": 36},
+      "final_metrics": {"trades": 152, "profit_factor": 3.5375817569, "expectancy_r": 0.6938201596, "win_rate_pct": 61.1842105, "positive_folds": "4/4", "worst_fold_expectancy_r": 0.0418695373},
+      "caveat": "Small and uneven chronological sample; one fold has roughly 12 completed trades. Not production-active.",
+      "break_even": "NO_BE"
+    }
+  },
+  "plateau_policy": {
+    "4H_and_1D": "Tight-trail results improved monotonically down to 0.8 ATR. Production uses 1.0 ATR as a natural lower bound instead of chasing the historical boundary optimum."
+  },
+  "runs": {
+    "entry_abc": 34171064525,
+    "sat_robustness": 34171281778,
+    "tight_plateau_1D": 34171774133,
+    "tight_plateau_4H": 34171925181,
+    "tp1_break_even": 34172047673
+  }
+}
