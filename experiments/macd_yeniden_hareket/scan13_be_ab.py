@@ -15,8 +15,8 @@ ENTRY={
  '1M':{"name":"A_original_positive_macd_cross","mode":"A"},
 }
 FINAL={
- '4H':('macd_tighten',dict(stop_mode='swing',stop_atr=1.2,swing=7,buffer=.20,trail=2.0,max_hold=40,tp1=1.0,tp2=2.0,tp3=3.0,tight=1.0)),
- '1D':('macd_tighten',dict(stop_mode='swing',stop_atr=1.25,swing=7,buffer=.20,trail=2.2,max_hold=40,tp1=1.0,tp2=2.0,tp3=3.0,tight=1.0)),
+ '4H':('macd_tighten',dict(stop_mode='swing',stop_atr=1.2,swing=7,buffer=.20,trail=2.0,max_hold=40,tp1=1.0,tp2=2.0,tp3=3.0,tight=.5)),
+ '1D':('macd_tighten',dict(stop_mode='swing',stop_atr=1.25,swing=7,buffer=.20,trail=2.2,max_hold=40,tp1=1.0,tp2=2.0,tp3=3.0,tight=.5)),
  '1W':('structural',dict(stop_mode='swing',stop_atr=1.3,swing=9,buffer=.15,trail=2.3,max_hold=60,tp1=1.0,tp2=2.0,tp3=3.0,tight=1.8)),
  '1M':('structural',dict(stop_mode='swing',stop_atr=1.3,swing=9,buffer=.15,trail=2.5,max_hold=36,tp1=1.0,tp2=2.0,tp3=3.0,tight=2.0)),
 }
@@ -87,6 +87,6 @@ def main():
     fam,p=FINAL[a.period];entry=ENTRY[a.period];frames,times,count=load_frames(a.db,a.period,entry);b=bounds_for(times);rows=[ev(frames,p,fam,b,m) for m in ('none','entry','cost')]
     no=rows[0];ne=float(no['stitched'].get('expectancy_r',0));best=max(rows[1:],key=lambda x:(x['positive_folds'],x['worst_fold_expectancy_r'],float(x['stitched'].get('expectancy_r',0))))
     be=float(best['stitched'].get('expectancy_r',0));decision='NO_BE' if be < ne-0.005 else ('USE_'+best['mode'].upper()+'_BE')
-    d={'version':'scan13-be-ab-v1','period':a.period,'entry_frozen':entry,'family':fam,'profile':p,'signal_count':count,'rows':rows,'decision':decision,'note':'Human materiality gate remains authoritative; 1M is research-only.'}
+    d={'version':'scan13-be-ab-v2','period':a.period,'entry_frozen':entry,'family':fam,'profile':p,'signal_count':count,'rows':rows,'decision':decision,'note':'Human materiality gate remains authoritative; 1M is research-only.'}
     q=Path(a.output);q.parent.mkdir(parents=True,exist_ok=True);q.write_text(json.dumps(d,ensure_ascii=False,indent=2,default=str)+'\n',encoding='utf-8');print(json.dumps(d,ensure_ascii=False,indent=2,default=str))
 if __name__=='__main__':main()
