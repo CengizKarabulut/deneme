@@ -1,0 +1,93 @@
+{
+  "scan_id": "macd_dip_donusu_v1",
+  "scan_number": 14,
+  "name": "MACD DipDonusu",
+  "status": "LOCKED",
+  "locked_at": "2026-09-08",
+  "common": {
+    "macd": [12, 26, 9],
+    "signal_bar": "completed_bar_only",
+    "entry_reference": "next_bar_open",
+    "same_symbol_overlap": "skip_new_signal_while_position_open",
+    "commission_bps_each_side": 10.0,
+    "slippage_bps_each_side": 10.0,
+    "same_bar_stop_target_priority": "STOP_FIRST",
+    "initial_risk_min_atr": 0.6,
+    "initial_risk_max_atr": 2.6,
+    "allocations": {"tp1_pct": 30, "tp2_pct": 30, "tp3_pct": 20, "runner_pct": 20},
+    "tp1_break_even": "NO_BE",
+    "validation_note": "Historical data has been observed; future unseen bars are true independent forward validation."
+  },
+  "entry_definitions": {
+    "A_no_rvol": {
+      "conditions": ["MACD Level < 0", "MACD fresh bullish crosses Signal"],
+      "rvol": "none"
+    },
+    "B_original_rvol_1_20": {
+      "conditions": ["MACD Level < 0", "MACD fresh bullish crosses Signal", "RVOL20 > 1.20"]
+    },
+    "C_strong_rvol_1_50": {
+      "conditions": ["MACD Level < 0", "MACD fresh bullish crosses Signal", "RVOL20 > 1.50"]
+    },
+    "rvol20": "Volume[t] / mean(Volume[t-1]...Volume[t-20]); current bar excluded"
+  },
+  "timeframes": {
+    "15m": {"status": "REJECT"},
+    "30m": {"status": "REJECT"},
+    "45m": {"status": "REJECT"},
+    "1H": {"status": "REJECT"},
+    "2H": {"status": "REJECT", "best_near_pf": 0.9108, "best_near_expectancy_r": -0.0586},
+    "4H": {
+      "status": "ACTIVE_SECONDARY",
+      "entry": "C_strong_rvol_1_50",
+      "entry_structural_control": {"trades": 4220, "profit_factor": 1.20158925, "expectancy_r": 0.103849672, "positive_folds": "3/4", "worst_fold_expectancy_r": -0.165864799},
+      "exit_family": "fail_tighten",
+      "profile": {"stop_mode": "swing", "stop_atr_fallback": 1.2, "swing": 7, "buffer_atr": 0.20, "tp1_r": 1.0, "tp2_r": 2.0, "tp3_r": 3.0, "normal_trail_atr": 2.0, "fail_tight_trail_atr": 0.8, "max_hold_bars": 40},
+      "management": "If MACD < Signal while MACD remains below zero, enable sticky 0.8 ATR trailing; may activate before TP2. No hard technical exit.",
+      "final_metrics": {"trades": 4498, "profit_factor": 2.1626291711, "expectancy_r": 0.3603913907, "win_rate_pct": 58.1369498, "positive_folds": "4/4", "worst_fold_expectancy_r": 0.1559017482},
+      "break_even": "NO_BE"
+    },
+    "1D": {
+      "status": "ACTIVE_SECONDARY",
+      "entry": "A_no_rvol",
+      "entry_structural_control": {"trades": 8797, "profit_factor": 1.4138059997, "expectancy_r": 0.2052896575, "positive_folds": "3/4", "worst_fold_expectancy_r": -0.1050295570},
+      "exit_family": "fail_tighten",
+      "profile": {"stop_mode": "swing", "stop_atr_fallback": 1.25, "swing": 7, "buffer_atr": 0.20, "tp1_r": 1.0, "tp2_r": 2.0, "tp3_r": 3.0, "normal_trail_atr": 2.2, "fail_tight_trail_atr": 0.8, "max_hold_bars": 40},
+      "management": "If MACD < Signal while MACD remains below zero, enable sticky 0.8 ATR trailing; may activate before TP2. No hard technical exit.",
+      "final_metrics": {"trades": 10060, "profit_factor": 2.3869758790, "expectancy_r": 0.4207776336, "win_rate_pct": 57.4850895, "positive_folds": "4/4", "worst_fold_expectancy_r": 0.1698933856},
+      "entry_choice_note": "A retained over RVOL1.5 C because it has materially broader sample and higher total expectancy under the same management; C had stronger worst-fold but lower total edge and far fewer trades.",
+      "break_even": "NO_BE"
+    },
+    "1W": {
+      "status": "ACTIVE",
+      "entry": "A_no_rvol",
+      "entry_structural_control": {"trades": 2456, "profit_factor": 2.6281779196, "expectancy_r": 0.6251928215, "positive_folds": "4/4", "worst_fold_expectancy_r": 0.2547608110},
+      "exit_family": "fail_tighten",
+      "profile": {"stop_mode": "swing", "stop_atr_fallback": 1.3, "swing": 11, "buffer_atr": 0.15, "tp1_r": 1.1, "tp2_r": 2.2, "tp3_r": 3.3, "normal_trail_atr": 2.3, "fail_tight_trail_atr": 1.2, "max_hold_bars": 60},
+      "management": "If MACD < Signal while MACD remains below zero, enable sticky 1.2 ATR trailing; no hard technical exit.",
+      "final_metrics": {"trades": 2890, "profit_factor": 3.5902177426, "expectancy_r": 0.6868965989, "win_rate_pct": 60.5190311, "positive_folds": "4/4", "worst_fold_expectancy_r": 0.4039624914},
+      "entry_choice_note": "RVOL1.5 C was slightly stronger numerically but used roughly one-third the sample. Materiality/sample-size gate retained simpler A.",
+      "break_even": "NO_BE"
+    },
+    "1M": {
+      "status": "RESEARCH_FORWARD_WATCH",
+      "entry": "A_no_rvol",
+      "exit_family": "structural",
+      "profile": {"stop_mode": "swing", "stop_atr_fallback": 1.3, "swing": 9, "buffer_atr": 0.15, "tp1_r": 1.0, "tp2_r": 2.0, "tp3_r": 3.0, "trail_atr_after_tp2": 2.5, "max_hold_bars": 36},
+      "final_metrics": {"trades": 57, "profit_factor": 10.2000255277, "expectancy_r": 1.2537555550, "win_rate_pct": 77.1929825, "positive_folds": "3/4", "worst_fold_expectancy_r": 0.0},
+      "caveat": "Very small/uneven completed sample; not production-active.",
+      "break_even": "NO_BE"
+    }
+  },
+  "plateau_policy": {
+    "4H": "0.6-1.6 ATR sweep improved monotonically as tightening increased; 0.8 ATR frozen one step inside lower boundary.",
+    "1D": "0.6-1.8 ATR sweep improved monotonically as tightening increased; 0.8 ATR frozen one step inside lower boundary.",
+    "1W": "1.0-2.2 ATR sweep improved monotonically as tightening increased; 1.2 ATR frozen one step inside lower boundary."
+  },
+  "runs": {
+    "entry_abc": 34194904986,
+    "sat_robustness": 34195285546,
+    "tight_plateau": 34195779015,
+    "tp1_break_even": 34196187458
+  }
+}
