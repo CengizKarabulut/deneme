@@ -1,0 +1,178 @@
+{
+  "version": "scanner-quality-registry-v1",
+  "date": "2026-09-08",
+  "purpose": "Completed scanner research promotion registry for future taramabot integration. Historical results are observed data; true independent confirmation is future unseen bars.",
+  "admission_gate": {
+    "production_candidate": {
+      "positive_chronological_folds": "4/4",
+      "worst_fold_expectancy_r_gt": 0.0,
+      "profit_factor_gte": 1.25,
+      "expectancy_r_gte": 0.10,
+      "completed_trades_gte": 300,
+      "monthly_timeframe_allowed": false,
+      "locked_final_status_required": true
+    },
+    "secondary": "Final result is 4/4 but the locked research explicitly says the edge materially depends on custom/adaptive risk management or the entry alone was not robust.",
+    "forward_watch": "All 1M models and/or small/uneven samples. Never route as normal production alerts until new forward evidence grows.",
+    "research": "Potentially interesting but <=3/4 positive folds, negative worst fold, or explicitly non-production in the final report.",
+    "reject": "Negative expectancy, PF <= 1, <=2/4 robustness, mathematical design issue, or explicit final rejection."
+  },
+  "quality_score_v1": {
+    "purpose": "Ranking aid only; admission gate and explicit management-dependence override the numeric score.",
+    "max": 100,
+    "weights": {
+      "fold_robustness": 25,
+      "worst_fold_expectancy": 20,
+      "expectancy": 20,
+      "profit_factor": 15,
+      "sample_size": 15,
+      "entry_independence": 5
+    },
+    "formula": {
+      "fold_robustness": "4/4=25; 3/4=15; 2/4=5; otherwise=0",
+      "worst_fold_expectancy": "20 * clamp(worst_fold_R, 0, 0.40) / 0.40",
+      "expectancy": "20 * clamp(expectancy_R, 0, 0.80) / 0.80",
+      "profit_factor": "15 * clamp(PF - 1, 0, 2) / 2",
+      "sample_size": "15 * min(log10(completed_trades) / 4, 1)",
+      "entry_independence": "ACTIVE=5; ACTIVE_SECONDARY=2; RESEARCH/WATCH=0"
+    },
+    "promotion_bands_after_gate": {
+      "CORE": "score >= 75 and not explicitly management-dependent",
+      "ACTIVE": "score < 75 and production gate passed",
+      "SECONDARY": "explicit management-dependence; score cannot upgrade it to CORE/ACTIVE"
+    }
+  },
+  "global_policy": {
+    "CORE": "Primary production scanner. Highest alert/report weight.",
+    "ACTIVE": "Normal production scanner.",
+    "SECONDARY": "Production early-warning / supporting signal. Lower confidence weight; never presented as equivalent to CORE.",
+    "FORWARD_WATCH": "Calculate and store forward performance, but do not route as ordinary production signal.",
+    "RESEARCH": "Keep in deneme; optional research/early-warning channel only.",
+    "REJECT": "Do not integrate as production scanner.",
+    "monthly_harmonization": "All 1M models are FORWARD_WATCH in the common registry even when an older individual report used a stronger label.",
+    "overlap_warning": "Do not sum scanner quality scores directly. Many scanners share MACD/RSI/BB/volume inputs; future stock-confidence scoring must apply signal-overlap/correlation penalties."
+  },
+  "family_decisions": [
+    {
+      "family": "NE ARARSAN VAR",
+      "source": "experiments/ne_ararsan_var/reports/final-decision.md",
+      "15m": "REJECT", "30m": "REJECT", "45m": "REJECT", "1H": "REJECT", "2H": "RESEARCH", "4H": "RESEARCH", "1D": "ACTIVE", "1W": "CORE", "1M": "FORWARD_WATCH"
+    },
+    {
+      "family": "StochRSI / Momentum / Hacim",
+      "source": "experiments/stoch_rsi_momentum_volume/reports/final-decision.md",
+      "15m": "REJECT", "30m": "REJECT", "45m": "REJECT", "1H": "REJECT", "2H": "REJECT", "4H": "RESEARCH", "1D": "ACTIVE", "1W": "CORE", "1M": "FORWARD_WATCH"
+    },
+    {
+      "family": "BB & SMA",
+      "source": "experiments/bb_sma/reports/final-decision.md",
+      "15m": "REJECT", "30m": "REJECT", "45m": "REJECT", "1H": "REJECT", "2H": "ACTIVE", "4H": "ACTIVE", "1D": "ACTIVE", "1W": "CORE", "1M": "FORWARD_WATCH"
+    },
+    {
+      "family": "RSI & MACD - RVOL",
+      "source": "experiments/rsi_macd_rvol/locked-spec.json",
+      "15m": "REJECT", "30m": "REJECT", "45m": "REJECT", "1H": "REJECT", "2H": "REJECT", "4H": "SECONDARY", "1D": "ACTIVE", "1W": "CORE", "1M": "FORWARD_WATCH"
+    },
+    {
+      "family": "7 - BB Daralması",
+      "source": "experiments/bb_squeeze/locked-spec.json",
+      "15m": "REJECT", "30m": "REJECT", "45m": "REJECT", "1H": "REJECT", "2H": "REJECT", "4H": "SECONDARY", "1D": "ACTIVE", "1W": "CORE", "1M": "FORWARD_WATCH"
+    },
+    {
+      "family": "8 - TavanTarama",
+      "source": "experiments/tavan_tarama/locked-spec.json",
+      "15m": "REJECT", "30m": "REJECT", "45m": "REJECT", "1H": "REJECT", "2H": "REJECT", "4H": "RESEARCH", "1D": "ACTIVE", "1W": "CORE", "1M": "FORWARD_WATCH"
+    },
+    {
+      "family": "9 - BulutKeser",
+      "source": "experiments/bulut_keser/locked-spec.json",
+      "15m": "REJECT", "30m": "REJECT", "45m": "REJECT", "1H": "REJECT", "2H": "REJECT", "4H": "SECONDARY", "1D": "ACTIVE", "1W": "CORE", "1M": "FORWARD_WATCH"
+    },
+    {
+      "family": "10 - HO/Volatilite",
+      "source": "experiments/ho_volatilite/reports/ema-ab-decision.md",
+      "15m": "REJECT", "30m": "REJECT", "45m": "REJECT", "1H": "REJECT", "2H": "REJECT", "4H": "REJECT", "1D": "REJECT", "1W": "REJECT", "1M": "REJECT",
+      "family_status": "REJECT_CURRENT_DESIGN"
+    },
+    {
+      "family": "11 - Stoc.RSI & RSI & BB & MACD",
+      "source": "experiments/stoc_rsi_rsi_bb_macd/locked-spec.json",
+      "15m": "REJECT", "30m": "REJECT", "45m": "REJECT", "1H": "REJECT", "2H": "REJECT", "4H": "SECONDARY", "1D": "CORE", "1W": "CORE", "1M": "FORWARD_WATCH"
+    },
+    {
+      "family": "13 - MACD YenidenHareket",
+      "source": "experiments/macd_yeniden_hareket/locked-spec.json",
+      "15m": "REJECT", "30m": "REJECT", "45m": "REJECT", "1H": "REJECT", "2H": "REJECT", "4H": "SECONDARY", "1D": "CORE", "1W": "CORE", "1M": "FORWARD_WATCH"
+    },
+    {
+      "family": "14 - MACD DipDönüşü",
+      "source": "experiments/macd_dip_donusu/locked-spec.json",
+      "15m": "REJECT", "30m": "REJECT", "45m": "REJECT", "1H": "REJECT", "2H": "REJECT", "4H": "SECONDARY", "1D": "SECONDARY", "1W": "CORE", "1M": "FORWARD_WATCH"
+    }
+  ],
+  "production_records_ranked": [
+    {"rank": 1, "family": "11 - Stoc.RSI & RSI & BB & MACD", "timeframe": "1W", "tier": "CORE", "quality_score": 96.3, "trades": 1202, "profit_factor": 3.164072, "expectancy_r": 0.789816, "win_rate_pct": 57.6539, "positive_folds": 4, "worst_fold_expectancy_r": 0.519236},
+    {"rank": 2, "family": "14 - MACD DipDönüşü", "timeframe": "1W", "tier": "CORE", "quality_score": 95.2, "trades": 2890, "profit_factor": 3.590218, "expectancy_r": 0.686897, "win_rate_pct": 60.5190, "positive_folds": 4, "worst_fold_expectancy_r": 0.403962},
+    {"rank": 3, "family": "RSI & MACD - RVOL", "timeframe": "1W", "tier": "CORE", "quality_score": 95.0, "trades": 1069, "profit_factor": 3.375872, "expectancy_r": 0.810221, "win_rate_pct": 59.4949, "positive_folds": 4, "worst_fold_expectancy_r": 0.373353},
+    {"rank": 4, "family": "9 - BulutKeser", "timeframe": "1W", "tier": "CORE", "quality_score": 94.1, "trades": 401, "profit_factor": 4.101807, "expectancy_r": 0.993432, "win_rate_pct": 63.5910, "positive_folds": 4, "worst_fold_expectancy_r": 0.386097},
+    {"rank": 5, "family": "13 - MACD YenidenHareket", "timeframe": "1D", "tier": "CORE", "quality_score": 93.4, "trades": 13705, "profit_factor": 4.295807, "expectancy_r": 0.536105, "win_rate_pct": 69.1791, "positive_folds": 4, "worst_fold_expectancy_r": 0.448441},
+    {"rank": 6, "family": "NE ARARSAN VAR", "timeframe": "1W", "tier": "CORE", "quality_score": 91.7, "trades": 1964, "profit_factor": 3.163, "expectancy_r": 0.743, "win_rate_pct": 60.44, "positive_folds": 4, "worst_fold_expectancy_r": 0.315},
+    {"rank": 7, "family": "8 - TavanTarama", "timeframe": "1W", "tier": "CORE", "quality_score": 89.3, "trades": 1104, "profit_factor": 3.301442, "expectancy_r": 0.838691, "win_rate_pct": 58.8768, "positive_folds": 4, "worst_fold_expectancy_r": 0.257265},
+    {"rank": 8, "family": "13 - MACD YenidenHareket", "timeframe": "1W", "tier": "CORE", "quality_score": 88.5, "trades": 1949, "profit_factor": 3.021426, "expectancy_r": 0.706560, "win_rate_pct": 58.6968, "positive_folds": 4, "worst_fold_expectancy_r": 0.270013},
+    {"rank": 9, "family": "7 - BB Daralması", "timeframe": "1W", "tier": "CORE", "quality_score": 87.7, "trades": 1597, "profit_factor": 2.679845, "expectancy_r": 0.656880, "win_rate_pct": 54.10, "positive_folds": 4, "worst_fold_expectancy_r": 0.334227},
+    {"rank": 10, "family": "StochRSI / Momentum / Hacim", "timeframe": "1W", "tier": "CORE", "quality_score": 86.6, "trades": 4324, "profit_factor": 2.689, "expectancy_r": 0.644, "win_rate_pct": 56.71, "positive_folds": 4, "worst_fold_expectancy_r": 0.284},
+    {"rank": 11, "family": "BB & SMA", "timeframe": "1W", "tier": "CORE", "quality_score": 81.7, "trades": 1572, "profit_factor": 2.726, "expectancy_r": 0.677, "win_rate_pct": 55.34, "positive_folds": 4, "worst_fold_expectancy_r": 0.196},
+    {"rank": 12, "family": "11 - Stoc.RSI & RSI & BB & MACD", "timeframe": "1D", "tier": "CORE", "quality_score": 78.9, "trades": 4480, "profit_factor": 2.690466, "expectancy_r": 0.345500, "win_rate_pct": 51.7634, "positive_folds": 4, "worst_fold_expectancy_r": 0.278155},
+    {"rank": 13, "family": "9 - BulutKeser", "timeframe": "1D", "tier": "ACTIVE", "quality_score": 69.6, "trades": 320, "profit_factor": 1.927330, "expectancy_r": 0.408194, "win_rate_pct": 50.9375, "positive_folds": 4, "worst_fold_expectancy_r": 0.260387},
+    {"rank": 14, "family": "StochRSI / Momentum / Hacim", "timeframe": "1D", "tier": "ACTIVE", "quality_score": 63.5, "trades": 10108, "profit_factor": 1.576, "expectancy_r": 0.276, "win_rate_pct": 46.74, "positive_folds": 4, "worst_fold_expectancy_r": 0.145},
+    {"rank": 15, "family": "7 - BB Daralması", "timeframe": "1D", "tier": "ACTIVE", "quality_score": 63.0, "trades": 2716, "profit_factor": 1.715315, "expectancy_r": 0.335114, "win_rate_pct": 47.79, "positive_folds": 4, "worst_fold_expectancy_r": 0.126969},
+    {"rank": 16, "family": "8 - TavanTarama", "timeframe": "1D", "tier": "ACTIVE", "quality_score": 59.0, "trades": 1030, "profit_factor": 1.766131, "expectancy_r": 0.215344, "win_rate_pct": 45.7282, "positive_folds": 4, "worst_fold_expectancy_r": 0.131385},
+    {"rank": 17, "family": "NE ARARSAN VAR", "timeframe": "1D", "tier": "ACTIVE", "quality_score": 58.8, "trades": 5320, "profit_factor": 1.512, "expectancy_r": 0.242, "win_rate_pct": 46.28, "positive_folds": 4, "worst_fold_expectancy_r": 0.099},
+    {"rank": 18, "family": "BB & SMA", "timeframe": "1D", "tier": "ACTIVE", "quality_score": 58.1, "trades": 3098, "profit_factor": 1.636, "expectancy_r": 0.206, "win_rate_pct": 43.74, "positive_folds": 4, "worst_fold_expectancy_r": 0.102},
+    {"rank": 19, "family": "BB & SMA", "timeframe": "4H", "tier": "ACTIVE", "quality_score": 55.7, "trades": 4995, "profit_factor": 1.416, "expectancy_r": 0.138, "win_rate_pct": 42.44, "positive_folds": 4, "worst_fold_expectancy_r": 0.106},
+    {"rank": 20, "family": "RSI & MACD - RVOL", "timeframe": "1D", "tier": "ACTIVE", "quality_score": 54.2, "trades": 8668, "profit_factor": 1.366093, "expectancy_r": 0.182904, "win_rate_pct": 43.9202, "positive_folds": 4, "worst_fold_expectancy_r": 0.043200},
+    {"rank": 21, "family": "BB & SMA", "timeframe": "2H", "tier": "ACTIVE", "quality_score": 53.0, "trades": 7483, "profit_factor": 1.302, "expectancy_r": 0.106, "win_rate_pct": 42.96, "positive_folds": 4, "worst_fold_expectancy_r": 0.072}
+  ],
+  "secondary_records": [
+    {"family": "13 - MACD YenidenHareket", "timeframe": "4H", "tier": "SECONDARY", "quality_score": 87.7, "trades": 16687, "profit_factor": 3.452682, "expectancy_r": 0.445762, "positive_folds": 4, "worst_fold_expectancy_r": 0.390369, "reason": "Entry structural control was only 3/4; custom MACD tightening materially creates final robustness."},
+    {"family": "14 - MACD DipDönüşü", "timeframe": "1D", "tier": "SECONDARY", "quality_score": 71.4, "trades": 10060, "profit_factor": 2.386976, "expectancy_r": 0.420778, "positive_folds": 4, "worst_fold_expectancy_r": 0.169893, "reason": "Entry structural control was 3/4; fail-tightening creates 4/4."},
+    {"family": "11 - Stoc.RSI & RSI & BB & MACD", "timeframe": "4H", "tier": "SECONDARY", "quality_score": 69.5, "trades": 7016, "profit_factor": 2.693271, "expectancy_r": 0.346491, "positive_folds": 4, "worst_fold_expectancy_r": 0.1340, "reason": "Entry alone was 3/4; BB Basis-loss tightening materially creates 4/4."},
+    {"family": "14 - MACD DipDönüşü", "timeframe": "4H", "tier": "SECONDARY", "quality_score": 66.2, "trades": 4498, "profit_factor": 2.162629, "expectancy_r": 0.360391, "positive_folds": 4, "worst_fold_expectancy_r": 0.155902, "reason": "Entry structural control was 3/4; fail-tightening creates 4/4."},
+    {"family": "9 - BulutKeser", "timeframe": "4H", "tier": "SECONDARY", "quality_score": 56.7, "trades": 415, "profit_factor": 1.889239, "expectancy_r": 0.239565, "positive_folds": 4, "worst_fold_expectancy_r": 0.145125, "reason": "Entry alone was not robust; Kijun-loss tightening materially creates 4/4."},
+    {"family": "RSI & MACD - RVOL", "timeframe": "4H", "tier": "SECONDARY", "quality_score": 53.8, "trades": 4603, "profit_factor": 1.572055, "expectancy_r": 0.144558, "positive_folds": 4, "worst_fold_expectancy_r": 0.102906, "reason": "Locked scanner explicitly classifies 4H as ACTIVE_SECONDARY."},
+    {"family": "7 - BB Daralması", "timeframe": "4H", "tier": "SECONDARY", "quality_score": 48.0, "trades": 1967, "profit_factor": 1.530224, "expectancy_r": 0.183311, "positive_folds": 4, "worst_fold_expectancy_r": 0.002525, "reason": "Very thin worst-fold margin; locked research explicitly marks secondary."}
+  ],
+  "research_only": [
+    {"family": "8 - TavanTarama", "timeframe": "4H", "reason": "3/4 positive; worst fold -0.006R."},
+    {"family": "NE ARARSAN VAR", "timeframe": "2H", "reason": "Final family report keeps 2H research only."},
+    {"family": "NE ARARSAN VAR", "timeframe": "4H", "reason": "Best tested fixed 4H trigger only 2/4 positive."},
+    {"family": "StochRSI / Momentum / Hacim", "timeframe": "4H", "reason": "Only 2/4 in locked research."}
+  ],
+  "final_family_promotion": {
+    "promote_to_taramabot_families": 10,
+    "promote": [
+      "NE ARARSAN VAR",
+      "StochRSI / Momentum / Hacim",
+      "BB & SMA",
+      "RSI & MACD - RVOL",
+      "7 - BB Daralması",
+      "8 - TavanTarama",
+      "9 - BulutKeser",
+      "11 - Stoc.RSI & RSI & BB & MACD",
+      "13 - MACD YenidenHareket",
+      "14 - MACD DipDönüşü"
+    ],
+    "reject_current_family": ["10 - HO/Volatilite"],
+    "timeframe_summary": {
+      "15m": "No production scanner in current research set",
+      "30m": "No production scanner in current research set",
+      "45m": "No production scanner in current research set",
+      "1H": "No production scanner in current research set",
+      "2H": "Only BB & SMA is production-active",
+      "4H": "BB & SMA is primary ACTIVE; several families are SECONDARY; remaining positive ideas stay RESEARCH",
+      "1D": "Main production layer with multiple CORE/ACTIVE models",
+      "1W": "Strongest and broadest production layer; most CORE scanners are weekly",
+      "1M": "FORWARD_WATCH only"
+    }
+  }
+}
