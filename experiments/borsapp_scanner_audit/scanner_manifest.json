@@ -8,8 +8,8 @@
   },
   "scanners": [
     {"id": "technical.volume_spike", "family": "technical", "directional": false, "status": "completed"},
-    {"id": "technical.squeeze_volume", "family": "technical", "directional": false, "status": "audit_started"},
-    {"id": "technical.extreme_rsi", "family": "technical", "directional": true, "status": "pending"},
+    {"id": "technical.squeeze_volume", "family": "technical", "directional": false, "status": "completed"},
+    {"id": "technical.extreme_rsi", "family": "technical", "directional": true, "status": "audit_started"},
     {"id": "technical.failed_breakout", "family": "technical", "directional": true, "status": "pending"},
     {"id": "technical.decision_zone", "family": "technical", "directional": false, "status": "pending"},
     {"id": "technical.trend_continuation", "family": "technical", "directional": true, "status": "pending"},
