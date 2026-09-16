@@ -16,7 +16,7 @@ on:
       - research/borsapp-scanner-audit
     paths:
       - ".github/workflows/borsapp-scanner-audit.yml"
-      - "experiments/borsapp_scanner_audit/**"
+      - "experiments/borsapp_scanner_audit/technical_volume_spike/volume_spike_backtest.py"
 
 permissions:
   actions: read
