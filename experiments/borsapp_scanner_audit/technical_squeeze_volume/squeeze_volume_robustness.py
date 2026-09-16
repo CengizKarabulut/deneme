@@ -159,7 +159,7 @@ def enrich(frame: pd.DataFrame, period: str, window: int = 20, min_history: int 
 
 
 def state_masks(data: pd.DataFrame, min_price: float, min_turnover: float) -> dict[str, pd.Series]:
-    warm = np.arange(len(data)) >= WARMUP - 1
+    warm = data["bar_index"] >= WARMUP - 1
     price = data["close"] >= min_price
     production_liquid = data["turnover_current_inclusive"] >= min_turnover
     previous_liquid = data["turnover_previous_only"] >= min_turnover
@@ -171,6 +171,7 @@ def state_masks(data: pd.DataFrame, min_price: float, min_turnover: float) -> di
     squeeze_only = squeeze & previous_liquid
     low_volume_control = squeeze & previous_liquid & (data["rvol"] < 1.0)
     slot = squeeze & previous_liquid & (data["slot_rvol"] >= PRODUCTION_RVOL_MIN)
+    slot_low_volume_control = squeeze & previous_liquid & (data["slot_rvol"] < 1.0)
 
     return {
         "production": prod,
@@ -178,6 +179,7 @@ def state_masks(data: pd.DataFrame, min_price: float, min_turnover: float) -> di
         "squeeze_only": squeeze_only,
         "low_volume_control": low_volume_control,
         "slot_rvol": slot,
+        "slot_low_volume_control": slot_low_volume_control,
     }
 
 
@@ -309,6 +311,7 @@ def run(args: argparse.Namespace) -> None:
             data = enrich(raw, args.period, args.window, args.min_history)
             data["symbol"] = symbol
             data["signal_time"] = data.index
+            data["bar_index"] = np.arange(len(data))
             frames.append(data.reset_index(drop=True))
 
         if not frames:
@@ -355,30 +358,29 @@ def run(args: argparse.Namespace) -> None:
         )
 
         matched_rows = []
-        matched_rows.extend(
-            matched_control_rows(
+        for sample_name, sample_mask in (("research", research_mask), ("holdout", holdout_mask)):
+            prod_rows = matched_control_rows(
                 all_rows,
-                masks["previous_turnover"],
-                masks["low_volume_control"],
-                "production_rvol_vs_same_squeeze_low_volume",
+                masks["previous_turnover"] & sample_mask,
+                masks["low_volume_control"] & sample_mask,
+                f"production_rvol_vs_same_squeeze_low_volume__{sample_name}",
             )
-        )
-        if args.period in INTRADAY:
-            matched_rows.extend(
-                matched_control_rows(
+            matched_rows.extend(prod_rows)
+            if args.period in INTRADAY:
+                slot_rows = matched_control_rows(
                     all_rows,
-                    masks["slot_rvol"],
-                    masks["low_volume_control"],
-                    "slot_rvol_vs_same_squeeze_low_volume",
+                    masks["slot_rvol"] & sample_mask,
+                    masks["slot_low_volume_control"] & sample_mask,
+                    f"slot_rvol_vs_same_squeeze_low_volume__{sample_name}",
                 )
-            )
+                matched_rows.extend(slot_rows)
         pd.DataFrame(matched_rows).to_csv(
             out_dir / f"squeeze_matched_control_{args.period}.csv", index=False
         )
 
         overlap_rows = [
             variant_overlap(masks["production"], masks["previous_turnover"], "turnover_current_vs_previous"),
-            variant_overlap(masks["production"], masks["slot_rvol"], "standard_vs_slot_rvol"),
+            variant_overlap(masks["previous_turnover"], masks["slot_rvol"], "standard_vs_slot_rvol"),
         ]
         pd.DataFrame(overlap_rows).to_csv(
             out_dir / f"squeeze_variant_overlap_{args.period}.csv", index=False
@@ -388,7 +390,7 @@ def run(args: argparse.Namespace) -> None:
             {
                 "inclusive_hit": masks["previous_turnover"],
                 "previous_rank_hit": (
-                    (np.arange(len(all_rows)) >= WARMUP - 1)
+                    (all_rows["bar_index"] >= WARMUP - 1)
                     & (all_rows["close"] >= args.min_price)
                     & (all_rows["turnover_previous_only"] >= args.min_turnover)
                     & (all_rows["bb_rank_previous_only"] <= PRODUCTION_BB_RANK_MAX)
@@ -421,8 +423,8 @@ def run(args: argparse.Namespace) -> None:
             "comparisons": [
                 "production all-state vs fresh-only",
                 "current-inclusive turnover vs previous-only turnover",
-                "production RVOL vs same-squeeze low-volume matched controls",
-                "intraday same-slot RVOL variant",
+                "production RVOL vs same-squeeze low-volume matched controls by research/holdout",
+                "intraday same-slot RVOL variant with slot-matched low-volume controls",
                 "inclusive BB rank vs previous-only BB rank",
             ],
             "matched_control_keys": [
