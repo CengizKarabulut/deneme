@@ -1,0 +1,23 @@
+{
+  "source": "CengizKarabulut/borsapp",
+  "scanners": [
+    {"id": "technical.volume_spike", "family": "technical", "directional": false, "status": "audit_started"},
+    {"id": "technical.squeeze_volume", "family": "technical", "directional": false, "status": "pending"},
+    {"id": "technical.extreme_rsi", "family": "technical", "directional": true, "status": "pending"},
+    {"id": "technical.failed_breakout", "family": "technical", "directional": true, "status": "pending"},
+    {"id": "technical.decision_zone", "family": "technical", "directional": false, "status": "pending"},
+    {"id": "technical.trend_continuation", "family": "technical", "directional": true, "status": "pending"},
+    {"id": "technical.exhaustion", "family": "technical", "directional": true, "status": "pending"},
+    {"id": "signal.macd_positive_cross", "family": "signal", "directional": true, "status": "pending"},
+    {"id": "signal.rsi_momentum_volume", "family": "signal", "directional": true, "status": "pending"},
+    {"id": "signal.rsi_macd_volume", "family": "signal", "directional": true, "status": "pending"},
+    {"id": "signal.smi_macd_positive", "family": "signal", "directional": true, "status": "pending"},
+    {"id": "signal.smi_macd_positive_volume_confirmed", "family": "signal", "directional": true, "status": "pending"},
+    {"id": "signal.smi_macd_early", "family": "signal", "directional": true, "status": "pending"},
+    {"id": "signal.smi_macd_full", "family": "signal", "directional": true, "status": "pending"},
+    {"id": "signal.sma_macd_volume", "family": "signal", "directional": true, "status": "pending"},
+    {"id": "signal.ema_trend_volume", "family": "signal", "directional": true, "status": "pending"},
+    {"id": "ma.near_zone", "family": "ma", "directional": true, "status": "pending"},
+    {"id": "decision.panel_v645", "family": "decision", "directional": true, "status": "pending"}
+  ]
+}
