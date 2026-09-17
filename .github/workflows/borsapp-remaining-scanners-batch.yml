@@ -14,7 +14,7 @@ on:
     branches:
       - research/borsapp-scanner-audit
     paths:
-      - 'experiments/borsapp_scanner_audit/batch_remaining/**'
+      - 'experiments/borsapp_scanner_audit/batch_remaining/remaining_scanners_batch.py'
       - '.github/workflows/borsapp-remaining-scanners-batch.yml'
 
 jobs:
