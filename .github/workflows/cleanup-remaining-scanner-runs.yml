@@ -1,0 +1,38 @@
+name: Cleanup duplicate remaining scanner runs
+
+on:
+  push:
+    branches:
+      - research/borsapp-scanner-audit
+    paths:
+      - '.github/workflows/cleanup-remaining-scanner-runs.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel older duplicate batch runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY' > /tmp/run_ids.txt
+          import json, subprocess
+          raw = subprocess.check_output([
+              'gh','api','repos/CengizKarabulut/deneme/actions/runs?branch=research%2Fborsapp-scanner-audit&per_page=100'
+          ], text=True)
+          data=json.loads(raw)
+          runs=[r for r in data['workflow_runs'] if r.get('name')=='Remaining scanner batch audit' and r.get('status') in ('queued','in_progress')]
+          runs=sorted(runs,key=lambda r:r['run_number'],reverse=True)
+          for r in runs[1:]:
+              print(r['id'])
+          PY
+          while read id; do
+            [ -z "$id" ] && continue
+            echo "Cancelling duplicate run $id"
+            gh api -X POST "repos/CengizKarabulut/deneme/actions/runs/$id/cancel" || true
+          done < /tmp/run_ids.txt
