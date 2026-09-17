@@ -1,0 +1,132 @@
+name: Final scanner audit aggregate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/borsapp-scanner-audit
+    paths:
+      - '.github/workflows/borsapp-final-audit-aggregate.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      BRANCH: research/borsapp-scanner-audit
+    steps:
+      - name: Exact audit job loglarini birlestir
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p final_audit logs
+          : > final_audit/exact_records.jsonl
+          : > final_audit/run_registry.tsv
+
+          collect_workflow() {
+            local group="$1"
+            local workflow="$2"
+            local run_id
+            run_id="$(gh api -X GET "repos/${REPO}/actions/workflows/${workflow}/runs" \
+              -f branch="${BRANCH}" -f status=success -f per_page=10 \
+              --jq '.workflow_runs[0].id // empty')"
+            test -n "$run_id"
+            printf '%s\t%s\t%s\n' "$group" "$workflow" "$run_id" >> final_audit/run_registry.tsv
+
+            gh api -X GET "repos/${REPO}/actions/runs/${run_id}/jobs" \
+              -f per_page=100 --paginate \
+              --jq '.jobs[] | [.id,.name] | @tsv' > "logs/${group}-jobs.tsv"
+
+            while IFS=$'\t' read -r job_id job_name; do
+              log_file="logs/${group}-${job_id}.log"
+              gh api "repos/${REPO}/actions/jobs/${job_id}/logs" > "$log_file"
+              python - "$group" "$run_id" "$job_id" "$job_name" "$log_file" >> final_audit/exact_records.jsonl <<'PY'
+import json, sys
+from pathlib import Path
+
+group, run_id, job_id, job_name, path = sys.argv[1:]
+text = Path(path).read_text(encoding='utf-8', errors='replace')
+found = None
+for line in text.splitlines():
+    pos = line.find('{"scanner"')
+    if pos < 0:
+        continue
+    candidate = line[pos:].strip()
+    try:
+        obj = json.loads(candidate)
+    except Exception:
+        continue
+    if isinstance(obj, dict) and 'scanner' in obj and 'summary' in obj:
+        found = obj
+if found is None:
+    raise SystemExit(f'No audit JSON found in {job_name}')
+found['_group'] = group
+found['_run_id'] = int(run_id)
+found['_job_id'] = int(job_id)
+found['_job_name'] = job_name
+print(json.dumps(found, ensure_ascii=False))
+PY
+            done < "logs/${group}-jobs.tsv"
+          }
+
+          collect_workflow signals borsapp-exact-signals-audit.yml
+          collect_workflow technicals borsapp-exact-technicals-audit.yml
+          collect_workflow ma borsapp-ma-near-zone-causal-oos.yml
+          collect_workflow panel borsapp-exact-panel-v645-audit.yml
+
+          python - <<'PY'
+import csv, json
+from pathlib import Path
+
+records = [json.loads(line) for line in Path('final_audit/exact_records.jsonl').read_text().splitlines() if line.strip()]
+period_order = {'15m':0,'30m':1,'45m':2,'1H':3,'2H':4,'4H':5,'1D':6,'1W':7}
+records.sort(key=lambda x: (x.get('scanner',''), period_order.get(x.get('period',''),99)))
+
+rows=[]
+for rec in records:
+    hold = next((x for x in rec.get('summary',[]) if x.get('split')=='holdout'), {})
+    research = next((x for x in rec.get('summary',[]) if x.get('split')=='research'), {})
+    row = {
+      'group':rec.get('_group'), 'scanner':rec.get('scanner'), 'period':rec.get('period'),
+      'events':rec.get('events',0), 'symbols_in_db':rec.get('symbols_in_db'),
+      'symbols_with_min_history':rec.get('symbols_with_min_history'),
+      'parity_note':rec.get('parity_note'), 'holdout_events':hold.get('events',0),
+      'holdout_symbols':hold.get('symbols',0), 'fresh_rate':hold.get('fresh_rate'),
+    }
+    for h in (1,3,5,10,20):
+      for key in ('hit','median_signed','median_abs','median_mfe','median_mae','median_range_atr'):
+        row[f'{key}_{h}'] = hold.get(f'{key}_{h}')
+      row[f'research_hit_{h}'] = research.get(f'hit_{h}')
+      row[f'research_signed_{h}'] = research.get(f'median_signed_{h}')
+    row['operation_status']=rec.get('operation_status')
+    row['limitation']=rec.get('limitation')
+    row['setup_counts']=json.dumps(rec.get('setup_counts',{}), ensure_ascii=False, sort_keys=True)
+    row['qualification_level_classes']=json.dumps(rec.get('qualification_level_classes',{}), ensure_ascii=False, sort_keys=True)
+    rows.append(row)
+
+fields=[]
+for row in rows:
+    for k in row:
+        if k not in fields: fields.append(k)
+with open('final_audit/exact_holdout_matrix.csv','w',newline='',encoding='utf-8') as f:
+    w=csv.DictWriter(f,fieldnames=fields); w.writeheader(); w.writerows(rows)
+Path('final_audit/exact_records_pretty.json').write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding='utf-8')
+print(f'Aggregated {len(records)} exact scanner/timeframe records')
+PY
+
+          cat final_audit/run_registry.tsv
+          head -n 5 final_audit/exact_holdout_matrix.csv
+
+      - name: Aggregate sonucu sakla
+        uses: actions/upload-artifact@v4
+        with:
+          name: borsapp-final-audit-aggregate-${{ github.run_id }}
+          path: final_audit/
+          if-no-files-found: error
+          retention-days: 30
