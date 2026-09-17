@@ -1,0 +1,49 @@
+name: Remaining scanner batch aggregate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/borsapp-scanner-audit
+    paths:
+      - '.github/workflows/borsapp-remaining-scanners-aggregate.yml'
+      - 'experiments/borsapp_scanner_audit/batch_remaining/aggregate_batch_results.py'
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: borsapp-remaining-scanners-aggregate
+  cancel-in-progress: true
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 120 artifact ozetini topla
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python experiments/borsapp_scanner_audit/batch_remaining/aggregate_batch_results.py \
+            --repo CengizKarabulut/deneme \
+            --run-id 35223809601 \
+            --out-dir aggregate_results
+
+      - name: Aggregate raporu artifact olarak sakla
+        uses: actions/upload-artifact@v4
+        with:
+          name: borsapp-remaining-scanners-aggregate-${{ github.run_id }}
+          path: aggregate_results/
+          if-no-files-found: error
+          retention-days: 30
