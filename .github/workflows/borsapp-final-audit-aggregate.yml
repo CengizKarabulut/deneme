@@ -49,7 +49,7 @@ jobs:
 
             while IFS=$'\t' read -r job_id job_name; do
               log_file="logs/${group}-${job_id}.log"
-              gh api "repos/${REPO}/actions/jobs/${job_id}/logs" > "$log_file"
+              gh api --allow-escape-sequences "repos/${REPO}/actions/jobs/${job_id}/logs" > "$log_file"
               python experiments/borsapp_scanner_audit/final_audit_aggregate.py extract \
                 --group "$group" \
                 --run-id "$run_id" \
