@@ -1,0 +1,87 @@
+name: Remaining scanner batch audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/borsapp-scanner-audit
+    paths:
+      - 'experiments/borsapp_scanner_audit/batch_remaining/**'
+      - '.github/workflows/borsapp-remaining-scanners-batch.yml'
+
+jobs:
+  audit:
+    strategy:
+      fail-fast: false
+      max-parallel: 24
+      matrix:
+        scanner:
+          - technical.failed_breakout
+          - technical.decision_zone
+          - technical.trend_continuation
+          - technical.exhaustion
+          - signal.macd_positive_cross
+          - signal.rsi_momentum_volume
+          - signal.rsi_macd_volume
+          - signal.smi_macd_positive
+          - signal.smi_macd_positive_volume_confirmed
+          - signal.smi_macd_early
+          - signal.smi_macd_full
+          - signal.sma_macd_volume
+          - signal.ema_trend_volume
+          - ma.near_zone
+          - decision.panel_v645
+        period: [15m, 30m, 45m, 1H, 2H, 4H, 1D, 1W]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Bagimliliklari kur
+        run: pip install pandas numpy
+
+      - name: Tarihsel SQLite artifactini indir
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PERIOD: ${{ matrix.period }}
+        run: |
+          mkdir -p historical
+          RUN_ID=$(gh run list --repo CengizKarabulut/taramabot --workflow historical-data.yml --status success --limit 100 --json databaseId,artifacts 2>/dev/null | python -c "import json,sys; d=json.load(sys.stdin); p='historical-live-'+'${PERIOD}'; print(next((str(x['databaseId']) for x in d if any(a.get('name')==p for a in (x.get('artifacts') or []))),''))" || true)
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(gh api "repos/CengizKarabulut/taramabot/actions/artifacts?per_page=100" --paginate | python -c "import json,sys; x=json.load(sys.stdin); p='historical-live-'+'${PERIOD}'; a=next((a for a in x.get('artifacts',[]) if a.get('name')==p and not a.get('expired')),None); print(a['workflow_run']['id'] if a else '')")
+          fi
+          test -n "$RUN_ID"
+          gh run download "$RUN_ID" --repo CengizKarabulut/taramabot -n "historical-live-${PERIOD}" -D historical
+          find historical -type f -maxdepth 3 -print
+          DB=$(find historical -type f \( -name '*.sqlite' -o -name '*.db' -o -name '*.sqlite3' \) | head -n 1)
+          test -n "$DB"
+          echo "DB_PATH=$DB" >> "$GITHUB_ENV"
+
+      - name: Audit kodunu derle
+        run: python -m py_compile experiments/borsapp_scanner_audit/batch_remaining/remaining_scanners_batch.py
+
+      - name: Scanner auditini calistir
+        env:
+          SCANNER: ${{ matrix.scanner }}
+          PERIOD: ${{ matrix.period }}
+        run: |
+          SAFE=$(echo "$SCANNER" | tr '.' '_')
+          OUT="results/${SAFE}/${PERIOD}"
+          python experiments/borsapp_scanner_audit/batch_remaining/remaining_scanners_batch.py \
+            --db "$DB_PATH" \
+            --scanner "$SCANNER" \
+            --period "$PERIOD" \
+            --out-dir "$OUT"
+
+      - name: Sonuclari artifact olarak sakla
+        uses: actions/upload-artifact@v4
+        with:
+          name: borsapp-${{ matrix.scanner }}-${{ matrix.period }}-${{ github.run_id }}
+          path: results/
+          retention-days: 30
