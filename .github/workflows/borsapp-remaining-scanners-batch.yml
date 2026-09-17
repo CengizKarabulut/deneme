@@ -1,5 +1,9 @@
 name: Remaining scanner batch audit
 
+concurrency:
+  group: borsapp-remaining-scanners-batch
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
