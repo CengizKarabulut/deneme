@@ -1,0 +1,74 @@
+name: Export deep Borsapp scanner robustness artifacts
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/borsapp-scanner-audit
+    paths:
+      - '.github/workflows/borsapp-export-deep-robustness.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: volume_spike_baseline
+            workflow: borsapp-scanner-audit.yml
+          - label: volume_spike_robustness
+            workflow: borsapp-volume-spike-robustness.yml
+          - label: volume_spike_final_checks
+            workflow: borsapp-volume-spike-final-checks.yml
+          - label: squeeze_volume_baseline
+            workflow: borsapp-squeeze-volume-audit.yml
+          - label: squeeze_volume_robustness
+            workflow: borsapp-squeeze-volume-robustness.yml
+          - label: extreme_rsi
+            workflow: borsapp-extreme-rsi-audit.yml
+          - label: legacy_proxy_batch_NOT_FINAL
+            workflow: borsapp-remaining-scanners-batch.yml
+          - label: legacy_proxy_aggregate_NOT_FINAL
+            workflow: borsapp-remaining-scanners-aggregate.yml
+          - label: legacy_proxy_parity_NOT_FINAL
+            workflow: borsapp-remaining-scanners-parity.yml
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      BRANCH: research/borsapp-scanner-audit
+    steps:
+      - name: Collect original artifact ZIP files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          RUN_ID=$(gh api -X GET "repos/${REPO}/actions/workflows/${{ matrix.workflow }}/runs" -f branch="${BRANCH}" -f status=success -f per_page=20 --jq '.workflow_runs[0].id // empty')
+          if [ -z "$RUN_ID" ]; then
+            echo "NO_SUCCESS_RUN" > out/STATUS.txt
+            echo "workflow=${{ matrix.workflow }}" >> out/STATUS.txt
+            exit 0
+          fi
+          echo "workflow=${{ matrix.workflow }}" > out/STATUS.txt
+          echo "run_id=${RUN_ID}" >> out/STATUS.txt
+          gh api -X GET "repos/${REPO}/actions/runs/${RUN_ID}/artifacts?per_page=100" --jq '.artifacts[] | [.id,.name,.size_in_bytes,.expired] | @tsv' > out/artifacts.tsv
+          while IFS=$'\t' read -r aid aname asize expired; do
+            if [ "$expired" = "true" ]; then
+              printf 'EXPIRED\t%s\t%s\n' "$aid" "$aname" >> out/skipped.tsv
+              continue
+            fi
+            safe=$(printf '%s' "$aname" | tr '/:' '__')
+            gh api -H 'Accept: application/vnd.github+json' "repos/${REPO}/actions/artifacts/${aid}/zip" > "out/${aid}__${safe}.zip"
+          done < out/artifacts.tsv
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-${{ matrix.label }}-${{ github.run_id }}
+          path: out/
+          if-no-files-found: error
+          retention-days: 30
