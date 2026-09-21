@@ -1,0 +1,198 @@
+name: Parallel full Borsapp scanner audit export
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/borsapp-scanner-audit
+    paths:
+      - '.github/workflows/borsapp-export-audit-parallel.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  exact-signals:
+    strategy:
+      fail-fast: false
+      matrix:
+        scanner:
+          - macd_positive_cross
+          - rsi_momentum_volume
+          - rsi_macd_volume
+          - smi_macd_positive
+          - smi_macd_positive_volume_confirmed
+          - smi_macd_early
+          - smi_macd_full
+          - sma_macd_volume
+          - ema_trend_volume
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      RUN_ID: '35261579706'
+    steps:
+      - name: Collect exact signal artifact ZIPs
+        shell: bash
+        run: |
+          set -euo pipefail
+          scanner='${{ matrix.scanner }}'
+          mkdir -p "out/${scanner}"
+          printf 'artifact_id\tartifact_name\tsize_bytes\texpired\n' > "out/${scanner}/inventory.tsv"
+          gh api -X GET "repos/${REPO}/actions/runs/${RUN_ID}/artifacts" -f per_page=100 --paginate \
+            --jq ".artifacts[] | select(.name | contains(\"signal.${scanner}-\")) | [.id,.name,.size_in_bytes,.expired] | @tsv" \
+            > "out/${scanner}/artifacts.tsv"
+          while IFS=$'\t' read -r id name size expired; do
+            [ -n "$id" ] || continue
+            printf '%s\t%s\t%s\t%s\n' "$id" "$name" "$size" "$expired" >> "out/${scanner}/inventory.tsv"
+            [ "$expired" = "true" ] && continue
+            curl --fail --silent --show-error --location \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${REPO}/actions/artifacts/${id}/zip" \
+              --output "out/${scanner}/${name}.zip"
+          done < "out/${scanner}/artifacts.tsv"
+          count=$(find "out/${scanner}" -maxdepth 1 -name '*.zip' | wc -l)
+          echo "Downloaded ${count} ZIPs for ${scanner}"
+          test "$count" -eq 8
+      - uses: actions/upload-artifact@v4
+        with:
+          name: audit-exact-signal-${{ matrix.scanner }}-${{ github.run_id }}
+          path: out/${{ matrix.scanner }}/
+          compression-level: 0
+          retention-days: 30
+
+  exact-technicals:
+    strategy:
+      fail-fast: false
+      matrix:
+        scanner:
+          - failed_breakout
+          - decision_zone
+          - trend_continuation
+          - exhaustion
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      RUN_ID: '35261792473'
+    steps:
+      - name: Collect exact technical artifact ZIPs
+        shell: bash
+        run: |
+          set -euo pipefail
+          scanner='${{ matrix.scanner }}'
+          mkdir -p "out/${scanner}"
+          printf 'artifact_id\tartifact_name\tsize_bytes\texpired\n' > "out/${scanner}/inventory.tsv"
+          gh api -X GET "repos/${REPO}/actions/runs/${RUN_ID}/artifacts" -f per_page=100 --paginate \
+            --jq ".artifacts[] | select(.name | contains(\"technical.${scanner}-\")) | [.id,.name,.size_in_bytes,.expired] | @tsv" \
+            > "out/${scanner}/artifacts.tsv"
+          while IFS=$'\t' read -r id name size expired; do
+            [ -n "$id" ] || continue
+            printf '%s\t%s\t%s\t%s\n' "$id" "$name" "$size" "$expired" >> "out/${scanner}/inventory.tsv"
+            [ "$expired" = "true" ] && continue
+            curl --fail --silent --show-error --location \
+              -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${REPO}/actions/artifacts/${id}/zip" --output "out/${scanner}/${name}.zip"
+          done < "out/${scanner}/artifacts.tsv"
+          count=$(find "out/${scanner}" -maxdepth 1 -name '*.zip' | wc -l)
+          echo "Downloaded ${count} ZIPs for ${scanner}"
+          test "$count" -eq 8
+      - uses: actions/upload-artifact@v4
+        with:
+          name: audit-exact-technical-${{ matrix.scanner }}-${{ github.run_id }}
+          path: out/${{ matrix.scanner }}/
+          compression-level: 0
+          retention-days: 30
+
+  ma-near-zone:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      RUN_ID: '35262075918'
+    steps:
+      - name: Collect MA causal OOS artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/ma_near_zone
+          gh api -X GET "repos/${REPO}/actions/runs/${RUN_ID}/artifacts" -f per_page=100 --paginate --jq '.artifacts[] | [.id,.name,.size_in_bytes,.expired] | @tsv' > out/ma_near_zone/artifacts.tsv
+          while IFS=$'\t' read -r id name size expired; do
+            [ -n "$id" ] || continue
+            [ "$expired" = "true" ] && continue
+            curl --fail --silent --show-error --location -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/${REPO}/actions/artifacts/${id}/zip" --output "out/ma_near_zone/${name}.zip"
+          done < out/ma_near_zone/artifacts.tsv
+          test "$(find out/ma_near_zone -maxdepth 1 -name '*.zip' | wc -l)" -eq 8
+      - uses: actions/upload-artifact@v4
+        with:
+          name: audit-ma-near-zone-causal-oos-${{ github.run_id }}
+          path: out/ma_near_zone/
+          compression-level: 0
+          retention-days: 30
+
+  panel:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      RUN_ID: '35261635465'
+    steps:
+      - name: Collect panel artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/panel
+          gh api -X GET "repos/${REPO}/actions/runs/${RUN_ID}/artifacts" -f per_page=100 --paginate --jq '.artifacts[] | [.id,.name,.size_in_bytes,.expired] | @tsv' > out/panel/artifacts.tsv
+          while IFS=$'\t' read -r id name size expired; do
+            [ -n "$id" ] || continue
+            [ "$expired" = "true" ] && continue
+            curl --fail --silent --show-error --location -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/${REPO}/actions/artifacts/${id}/zip" --output "out/panel/${name}.zip"
+          done < out/panel/artifacts.tsv
+          test "$(find out/panel -maxdepth 1 -name '*.zip' | wc -l)" -eq 8
+      - uses: actions/upload-artifact@v4
+        with:
+          name: audit-panel-v645-${{ github.run_id }}
+          path: out/panel/
+          compression-level: 0
+          retention-days: 30
+
+  methods-and-aggregate:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      AGG_RUN_ID: '35276282155'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/borsapp-scanner-audit
+      - name: Build reproducibility package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/{research,workflows,aggregate}
+          cp -a experiments/borsapp_scanner_audit/. out/research/
+          cp .github/workflows/borsapp-*.yml out/workflows/ 2>/dev/null || true
+          gh api -X GET "repos/${REPO}/actions/runs/${AGG_RUN_ID}/artifacts" -f per_page=100 --jq '.artifacts[] | [.id,.name,.expired] | @tsv' > out/aggregate/artifacts.tsv
+          while IFS=$'\t' read -r id name expired; do
+            [ -n "$id" ] || continue
+            [ "$expired" = "true" ] && continue
+            curl --fail --silent --show-error --location -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/${REPO}/actions/artifacts/${id}/zip" --output "out/aggregate/${name}.zip"
+          done < out/aggregate/artifacts.tsv
+          printf '%s\n' \
+            'FINAL evidence is in exact signal / technical / MA / panel artifacts.' \
+            'MA Near Zone is causal frozen-qualification OOS, not historical PostgreSQL-state replay.' \
+            'Panel v645 production contract supports 1D only.' \
+            'Legacy proxy batch is not included here as final evidence.' \
+            'Raw 584-symbol OHLCV/SQLite INPUT data is separate from the audit RESULT set.' \
+            > out/README.txt
+          git rev-parse HEAD > out/research_branch_commit.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: audit-methods-reports-aggregate-${{ github.run_id }}
+          path: out/
+          compression-level: 0
+          retention-days: 30
