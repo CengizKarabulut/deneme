@@ -1,0 +1,181 @@
+name: Export full Borsapp scanner audit artifact set
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/borsapp-scanner-audit
+    paths:
+      - '.github/workflows/borsapp-export-full-scanner-audit-zips.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      BRANCH: research/borsapp-scanner-audit
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/borsapp-scanner-audit
+
+      - name: Download original audit artifact ZIP files
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="full_audit_export"
+          mkdir -p "$ROOT"/{00_INDEX,01_EXACT_SIGNALS,02_EXACT_TECHNICALS,03_MA_NEAR_ZONE_CAUSAL_OOS,04_PANEL_V645_EXACT,05_DEEP_ROBUSTNESS,06_METHODS_REPORTS_SCRIPTS,07_WORKFLOWS,08_AGGREGATE,99_LEGACY_PROXY_NOT_FINAL}
+          printf 'category\tworkflow\trun_id\tartifact_id\tartifact_name\tsize_bytes\texpired\tdownload_status\n' > "$ROOT/00_INDEX/artifact_inventory.tsv"
+          printf 'category\tworkflow\trun_id\tstatus\n' > "$ROOT/00_INDEX/run_registry.tsv"
+
+          latest_success_run() {
+            local workflow="$1"
+            gh api -X GET "repos/${REPO}/actions/workflows/${workflow}/runs" -f branch="${BRANCH}" -f status=success -f per_page=20 --jq '.workflow_runs[0].id // empty'
+          }
+
+          download_run_zips() {
+            local category="$1"
+            local workflow="$2"
+            local dest="$3"
+            local run_id
+            run_id="$(latest_success_run "$workflow" || true)"
+            if [ -z "$run_id" ]; then
+              printf '%s\t%s\t\tNO_SUCCESS_RUN\n' "$category" "$workflow" >> "$ROOT/00_INDEX/run_registry.tsv"
+              return 0
+            fi
+            printf '%s\t%s\t%s\tsuccess\n' "$category" "$workflow" "$run_id" >> "$ROOT/00_INDEX/run_registry.tsv"
+            mkdir -p "$dest"
+            gh api -X GET "repos/${REPO}/actions/runs/${run_id}/artifacts" -f per_page=100 --paginate --jq '.artifacts[] | [.id,.name,.size_in_bytes,.expired] | @tsv' > "$dest/_artifacts.tsv"
+            while IFS=$'\t' read -r artifact_id artifact_name artifact_size expired; do
+              [ -n "$artifact_id" ] || continue
+              safe_name="$(printf '%s' "$artifact_name" | tr '/:' '__')"
+              out="$dest/${safe_name}.zip"
+              status="SKIPPED_EXPIRED"
+              if [ "$expired" != "true" ]; then
+                if curl --fail --silent --show-error --location \
+                  -H "Authorization: Bearer ${GH_TOKEN}" \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "X-GitHub-Api-Version: 2022-11-28" \
+                  "https://api.github.com/repos/${REPO}/actions/artifacts/${artifact_id}/zip" \
+                  --output "$out"; then
+                  status="DOWNLOADED"
+                else
+                  status="DOWNLOAD_FAILED"
+                  rm -f "$out"
+                fi
+              fi
+              printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$category" "$workflow" "$run_id" "$artifact_id" "$artifact_name" "$artifact_size" "$expired" "$status" >> "$ROOT/00_INDEX/artifact_inventory.tsv"
+            done < "$dest/_artifacts.tsv"
+          }
+
+          download_run_zips exact_signals borsapp-exact-signals-audit.yml "$ROOT/01_EXACT_SIGNALS"
+          download_run_zips exact_technicals borsapp-exact-technicals-audit.yml "$ROOT/02_EXACT_TECHNICALS"
+          download_run_zips ma_near_zone borsapp-ma-near-zone-causal-oos.yml "$ROOT/03_MA_NEAR_ZONE_CAUSAL_OOS"
+          download_run_zips panel_v645 borsapp-exact-panel-v645-audit.yml "$ROOT/04_PANEL_V645_EXACT"
+          download_run_zips aggregate borsapp-final-audit-aggregate.yml "$ROOT/08_AGGREGATE"
+
+          download_run_zips volume_spike_baseline borsapp-scanner-audit.yml "$ROOT/05_DEEP_ROBUSTNESS/volume_spike/baseline"
+          download_run_zips volume_spike_robustness borsapp-volume-spike-robustness.yml "$ROOT/05_DEEP_ROBUSTNESS/volume_spike/robustness"
+          download_run_zips volume_spike_final borsapp-volume-spike-final-checks.yml "$ROOT/05_DEEP_ROBUSTNESS/volume_spike/final_checks"
+          download_run_zips squeeze_volume_baseline borsapp-squeeze-volume-audit.yml "$ROOT/05_DEEP_ROBUSTNESS/squeeze_volume/baseline"
+          download_run_zips squeeze_volume_robustness borsapp-squeeze-volume-robustness.yml "$ROOT/05_DEEP_ROBUSTNESS/squeeze_volume/robustness"
+          download_run_zips extreme_rsi borsapp-extreme-rsi-audit.yml "$ROOT/05_DEEP_ROBUSTNESS/extreme_rsi"
+
+          download_run_zips legacy_proxy_batch borsapp-remaining-scanners-batch.yml "$ROOT/99_LEGACY_PROXY_NOT_FINAL/batch"
+          download_run_zips legacy_proxy_aggregate borsapp-remaining-scanners-aggregate.yml "$ROOT/99_LEGACY_PROXY_NOT_FINAL/aggregate"
+          download_run_zips parity_checks borsapp-remaining-scanners-parity.yml "$ROOT/99_LEGACY_PROXY_NOT_FINAL/parity_checks"
+
+          cp -a experiments/borsapp_scanner_audit/. "$ROOT/06_METHODS_REPORTS_SCRIPTS/"
+          for f in borsapp-scanner-audit.yml borsapp-volume-spike-robustness.yml borsapp-volume-spike-final-checks.yml borsapp-squeeze-volume-audit.yml borsapp-squeeze-volume-robustness.yml borsapp-extreme-rsi-audit.yml borsapp-exact-signals-audit.yml borsapp-exact-technicals-audit.yml borsapp-ma-near-zone-causal-oos.yml borsapp-exact-panel-v645-audit.yml borsapp-final-audit-aggregate.yml borsapp-remaining-scanners-batch.yml borsapp-remaining-scanners-parity.yml; do
+            cp ".github/workflows/$f" "$ROOT/07_WORKFLOWS/" 2>/dev/null || true
+          done
+
+          printf '%s\n' \
+            'BORSAPP SCANNER AUDIT - COMPLETE RETRIEVABLE RESULT SET' \
+            '' \
+            '01_EXACT_SIGNALS = final production-formula exact signal replay artifacts.' \
+            '02_EXACT_TECHNICALS = final exact technical-context replay artifacts.' \
+            '03_MA_NEAR_ZONE_CAUSAL_OOS = causal frozen-qualification OOS; historical PostgreSQL qualification state was unavailable.' \
+            '04_PANEL_V645_EXACT = exact panel replay; production supports 1D only.' \
+            '05_DEEP_ROBUSTNESS = Volume Spike, Squeeze Volume and Extreme RSI deeper audit artifacts.' \
+            '06_METHODS_REPORTS_SCRIPTS = committed methodology, reports and replay/audit code.' \
+            '07_WORKFLOWS = relevant workflow definitions.' \
+            '08_AGGREGATE = final compact matrix/registry artifact ZIPs.' \
+            '99_LEGACY_PROXY_NOT_FINAL = exploratory proxy material; DO NOT use as final production-parity evidence.' \
+            '' \
+            'Each .zip under result directories is the ORIGINAL GitHub Actions artifact archive and has deliberately not been extracted or recompressed.' \
+            'The 584-symbol historical OHLCV/SQLite source database is an INPUT dataset and is not included in this result export; export it separately if required.' \
+            > "$ROOT/00_INDEX/README.txt"
+          git rev-parse HEAD > "$ROOT/00_INDEX/research_branch_commit.txt"
+          find "$ROOT" -type f -printf '%P\t%s\n' | sort > "$ROOT/00_INDEX/local_file_inventory.tsv"
+          du -sh "$ROOT"/* > "$ROOT/00_INDEX/category_sizes.txt"
+          cat "$ROOT/00_INDEX/category_sizes.txt"
+          cat "$ROOT/00_INDEX/run_registry.tsv"
+
+      - name: Upload index and research code
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanner-audit-00-index-methods-${{ github.run_id }}
+          path: |
+            full_audit_export/00_INDEX/
+            full_audit_export/06_METHODS_REPORTS_SCRIPTS/
+            full_audit_export/07_WORKFLOWS/
+          compression-level: 0
+          retention-days: 30
+
+      - name: Upload exact signals
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanner-audit-01-exact-signals-${{ github.run_id }}
+          path: full_audit_export/01_EXACT_SIGNALS/
+          compression-level: 0
+          retention-days: 30
+
+      - name: Upload exact technicals
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanner-audit-02-exact-technicals-${{ github.run_id }}
+          path: full_audit_export/02_EXACT_TECHNICALS/
+          compression-level: 0
+          retention-days: 30
+
+      - name: Upload MA near-zone causal OOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanner-audit-03-ma-near-zone-${{ github.run_id }}
+          path: full_audit_export/03_MA_NEAR_ZONE_CAUSAL_OOS/
+          compression-level: 0
+          retention-days: 30
+
+      - name: Upload panel and aggregate
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanner-audit-04-panel-aggregate-${{ github.run_id }}
+          path: |
+            full_audit_export/04_PANEL_V645_EXACT/
+            full_audit_export/08_AGGREGATE/
+          compression-level: 0
+          retention-days: 30
+
+      - name: Upload deep robustness
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanner-audit-05-deep-robustness-${{ github.run_id }}
+          path: full_audit_export/05_DEEP_ROBUSTNESS/
+          compression-level: 0
+          retention-days: 30
+
+      - name: Upload legacy proxy evidence separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanner-audit-99-legacy-proxy-NOT-FINAL-${{ github.run_id }}
+          path: full_audit_export/99_LEGACY_PROXY_NOT_FINAL/
+          compression-level: 0
+          retention-days: 30
