@@ -1,0 +1,139 @@
+name: Export full Borsapp scanner audit archive
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/borsapp-scanner-audit
+    paths:
+      - '.github/workflows/borsapp-export-full-scanner-audit.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      BRANCH: research/borsapp-scanner-audit
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/borsapp-scanner-audit
+
+      - name: Collect all audit outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="borsapp_scanner_audit_full_2026-09"
+          mkdir -p "$ROOT"/{00_INDEX,01_EXACT_SIGNALS,02_EXACT_TECHNICALS,03_MA_NEAR_ZONE_CAUSAL_OOS,04_PANEL_V645_EXACT,05_DEEP_ROBUSTNESS,06_METHODS_REPORTS_SCRIPTS,07_WORKFLOWS,08_AGGREGATE,99_LEGACY_PROXY_NOT_FINAL}
+
+          printf 'category\tworkflow\trun_id\tconclusion\tartifact_status\n' > "$ROOT/00_INDEX/run_registry.tsv"
+
+          latest_success_run() {
+            local workflow="$1"
+            gh api -X GET "repos/${REPO}/actions/workflows/${workflow}/runs" \
+              -f branch="${BRANCH}" -f status=success -f per_page=20 \
+              --jq '.workflow_runs[0].id // empty'
+          }
+
+          download_latest() {
+            local category="$1"
+            local workflow="$2"
+            local dest="$3"
+            local run_id
+            run_id="$(latest_success_run "$workflow" || true)"
+            if [ -z "$run_id" ]; then
+              printf '%s\t%s\t\tNO_SUCCESS_RUN\tNOT_DOWNLOADED\n' "$category" "$workflow" >> "$ROOT/00_INDEX/run_registry.tsv"
+              return 0
+            fi
+            mkdir -p "$dest"
+            if gh run download "$run_id" --repo "$REPO" --dir "$dest"; then
+              printf '%s\t%s\t%s\tsuccess\tDOWNLOADED\n' "$category" "$workflow" "$run_id" >> "$ROOT/00_INDEX/run_registry.tsv"
+            else
+              printf '%s\t%s\t%s\tsuccess\tDOWNLOAD_FAILED_OR_EXPIRED\n' "$category" "$workflow" "$run_id" >> "$ROOT/00_INDEX/run_registry.tsv"
+            fi
+          }
+
+          # Exact / causal final audit families.
+          download_latest exact_signals borsapp-exact-signals-audit.yml "$ROOT/01_EXACT_SIGNALS"
+          download_latest exact_technicals borsapp-exact-technicals-audit.yml "$ROOT/02_EXACT_TECHNICALS"
+          download_latest ma_near_zone borsapp-ma-near-zone-causal-oos.yml "$ROOT/03_MA_NEAR_ZONE_CAUSAL_OOS"
+          download_latest panel_v645 borsapp-exact-panel-v645-audit.yml "$ROOT/04_PANEL_V645_EXACT"
+          download_latest aggregate borsapp-final-audit-aggregate.yml "$ROOT/08_AGGREGATE"
+
+          # Deep robustness families used for the first three scanners.
+          download_latest volume_spike_baseline borsapp-scanner-audit.yml "$ROOT/05_DEEP_ROBUSTNESS/volume_spike/baseline"
+          download_latest volume_spike_robustness borsapp-volume-spike-robustness.yml "$ROOT/05_DEEP_ROBUSTNESS/volume_spike/robustness"
+          download_latest volume_spike_final borsapp-volume-spike-final-checks.yml "$ROOT/05_DEEP_ROBUSTNESS/volume_spike/final_checks"
+          download_latest squeeze_volume_baseline borsapp-squeeze-volume-audit.yml "$ROOT/05_DEEP_ROBUSTNESS/squeeze_volume/baseline"
+          download_latest squeeze_volume_robustness borsapp-squeeze-volume-robustness.yml "$ROOT/05_DEEP_ROBUSTNESS/squeeze_volume/robustness"
+          download_latest extreme_rsi borsapp-extreme-rsi-audit.yml "$ROOT/05_DEEP_ROBUSTNESS/extreme_rsi"
+
+          # Old exploratory/proxy runs are preserved but explicitly segregated.
+          download_latest legacy_proxy_batch borsapp-remaining-scanners-batch.yml "$ROOT/99_LEGACY_PROXY_NOT_FINAL/batch"
+          download_latest legacy_proxy_aggregate borsapp-remaining-scanners-aggregate.yml "$ROOT/99_LEGACY_PROXY_NOT_FINAL/aggregate"
+          download_latest parity_checks borsapp-remaining-scanners-parity.yml "$ROOT/99_LEGACY_PROXY_NOT_FINAL/parity_checks"
+
+          # Copy the complete committed audit research tree and relevant workflows.
+          cp -a experiments/borsapp_scanner_audit/. "$ROOT/06_METHODS_REPORTS_SCRIPTS/"
+          cp .github/workflows/borsapp-scanner-audit.yml "$ROOT/07_WORKFLOWS/" || true
+          cp .github/workflows/borsapp-volume-spike-robustness.yml "$ROOT/07_WORKFLOWS/" || true
+          cp .github/workflows/borsapp-volume-spike-final-checks.yml "$ROOT/07_WORKFLOWS/" || true
+          cp .github/workflows/borsapp-squeeze-volume-audit.yml "$ROOT/07_WORKFLOWS/" || true
+          cp .github/workflows/borsapp-squeeze-volume-robustness.yml "$ROOT/07_WORKFLOWS/" || true
+          cp .github/workflows/borsapp-extreme-rsi-audit.yml "$ROOT/07_WORKFLOWS/" || true
+          cp .github/workflows/borsapp-exact-signals-audit.yml "$ROOT/07_WORKFLOWS/" || true
+          cp .github/workflows/borsapp-exact-technicals-audit.yml "$ROOT/07_WORKFLOWS/" || true
+          cp .github/workflows/borsapp-ma-near-zone-causal-oos.yml "$ROOT/07_WORKFLOWS/" || true
+          cp .github/workflows/borsapp-exact-panel-v645-audit.yml "$ROOT/07_WORKFLOWS/" || true
+          cp .github/workflows/borsapp-final-audit-aggregate.yml "$ROOT/07_WORKFLOWS/" || true
+          cp .github/workflows/borsapp-remaining-scanners-batch.yml "$ROOT/07_WORKFLOWS/" || true
+          cp .github/workflows/borsapp-remaining-scanners-parity.yml "$ROOT/07_WORKFLOWS/" || true
+
+          cat > "$ROOT/00_INDEX/README.txt" <<'EOF'
+BORSAPP SCANNER AUDIT - FULL EXPORT
+
+This archive preserves the complete retrievable audit-output set used in the September 2026 Borsapp scanner review.
+
+FINAL / PRIMARY EVIDENCE:
+- 01_EXACT_SIGNALS: production-formula replay for 9 signal scanners x 8 timeframes.
+- 02_EXACT_TECHNICALS: exact production technical-context replay for 4 technical scanners x 8 timeframes.
+- 03_MA_NEAR_ZONE_CAUSAL_OOS: causal frozen-qualification OOS results. This is NOT a historical replay of PostgreSQL qualification state because that state history was unavailable in candle SQLite.
+- 04_PANEL_V645_EXACT: exact Decision Panel v6.4.5 replay. Production contract supports 1D only; zero-event unsupported timeframes are intentional.
+- 05_DEEP_ROBUSTNESS: deeper baseline/control/robustness/final-check artifacts for Volume Spike, Squeeze Volume, and Extreme RSI when retrievable.
+- 08_AGGREGATE: compact cross-scanner exact/causal matrices and run registry.
+
+LEGACY / NON-FINAL:
+- 99_LEGACY_PROXY_NOT_FINAL contains exploratory/proxy batch material. It MUST NOT be treated as final production-parity evidence for scanners where proxy formulas differed from production.
+
+SOURCE MATERIAL:
+- 06_METHODS_REPORTS_SCRIPTS contains committed methodology, reports, scripts, manifests, and analysis files.
+- 07_WORKFLOWS contains relevant GitHub Actions definitions for reproducibility.
+
+IMPORTANT:
+This archive contains audit RESULTS and research code. The historical 584-symbol OHLCV/SQLite source database used as INPUT is not duplicated here. That source data should be exported separately if a full raw-market-data backup is required.
+EOF
+
+          git rev-parse HEAD > "$ROOT/00_INDEX/research_branch_commit.txt"
+          find "$ROOT" -type f -printf '%P\t%s bytes\n' | sort > "$ROOT/00_INDEX/file_inventory.tsv"
+          du -ah "$ROOT" | sort -h > "$ROOT/00_INDEX/size_inventory.txt"
+
+          tar -czf borsapp_scanner_audit_full_2026-09.tar.gz "$ROOT"
+          ls -lh borsapp_scanner_audit_full_2026-09.tar.gz
+          tail -n +1 "$ROOT/00_INDEX/run_registry.tsv"
+
+      - name: Upload full audit archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: borsapp-scanner-audit-full-2026-09-${{ github.run_id }}
+          path: |
+            borsapp_scanner_audit_full_2026-09.tar.gz
+            borsapp_scanner_audit_full_2026-09/00_INDEX/
+          if-no-files-found: error
+          retention-days: 30
